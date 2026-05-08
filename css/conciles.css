@@ -1,0 +1,232 @@
+/* ── PAGE CONCILES ── */
+.conciles-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  gap: 24px;
+}
+
+.conciles-main    { flex: 1; min-width: 0; }
+.conciles-sidebar { width: 280px; flex-shrink: 0; }
+
+/* ── HEADER ACTION ── */
+.conciles-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.conciles-title {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+
+.btn-create-concile {
+  padding: 9px 20px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--accent), #3d30a0);
+  color: white; border: none;
+  font-family: 'Cinzel', serif;
+  font-size: 11px; letter-spacing: 1.5px;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-create-concile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(91,78,203,0.3);
+}
+
+/* ── FILTRES ── */
+.filter-row {
+  display: flex; gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 6px 16px; border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface); color: var(--text2);
+  cursor: pointer; transition: all 0.2s;
+}
+.filter-pill:hover  { border-color: var(--border2); }
+.filter-pill.active {
+  background: rgba(91,78,203,0.08);
+  color: var(--accent);
+  border-color: rgba(91,78,203,0.3);
+}
+
+/* ── CARTE CONCILE ── */
+.concile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  text-decoration: none;
+  color: inherit;
+}
+.concile-card:hover {
+  border-color: var(--border2);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.concile-icon-wrap {
+  width: 52px; height: 52px; flex-shrink: 0;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+
+.concile-body { flex: 1; min-width: 0; }
+
+.concile-name {
+  font-family: 'Cinzel', serif;
+  font-size: 15px; font-weight: 600;
+  color: var(--text); margin-bottom: 5px;
+}
+
+.concile-desc {
+  font-size: 13px; color: var(--text2);
+  line-height: 1.5; margin-bottom: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.concile-meta {
+  display: flex; gap: 10px; align-items: center;
+  flex-wrap: wrap;
+}
+
+.concile-type-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 10px; border-radius: 8px;
+  font-family: 'Cinzel', serif; letter-spacing: 1px;
+}
+
+.concile-members-count {
+  font-size: 11px; color: var(--text3);
+  display: flex; align-items: center; gap: 4px;
+}
+
+.concile-join-btn {
+  margin-left: auto;
+  padding: 7px 18px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  border: none; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+
+/* ── PAGE INTERNE CONCILE ── */
+.concile-page-wrap {
+  max-width: 980px; margin: 0 auto;
+  padding: 24px 16px;
+  display: flex; gap: 24px;
+}
+
+.concile-page-main    { flex: 1; min-width: 0; }
+.concile-page-sidebar { width: 280px; flex-shrink: 0; }
+
+.concile-banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.concile-banner-top {
+  display: flex; gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.concile-big-icon {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  display: flex; align-items: center;
+  justify-content: center; font-size: 30px;
+  flex-shrink: 0;
+}
+
+.concile-banner-info { flex: 1; }
+
+.concile-banner-name {
+  font-family: 'Cinzel', serif;
+  font-size: 20px; font-weight: 700;
+  color: var(--text); margin-bottom: 5px;
+}
+
+.concile-banner-intention {
+  font-size: 13px; color: var(--text2);
+  line-height: 1.6; margin-bottom: 12px;
+}
+
+.concile-banner-actions { display: flex; gap: 8px; }
+
+.concile-stats-row {
+  display: flex; gap: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.concile-stat {
+  flex: 1; text-align: center;
+  border-right: 1px solid var(--border);
+  padding: 0 12px;
+}
+.concile-stat:last-child { border-right: none; }
+
+/* ── MEMBRE CARD ── */
+.member-item {
+  display: flex; align-items: center;
+  gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.member-item:last-child { border-bottom: none; }
+
+.member-avatar {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center;
+  justify-content: center;
+  font-weight: 700; font-size: 13px;
+  flex-shrink: 0;
+}
+
+.member-name  { font-size: 13px; font-weight: 600; color: var(--text); }
+.member-handle { font-size: 11px; color: var(--text3); }
+
+.guardian-crown {
+  margin-left: auto;
+  font-size: 14px; title: 'Gardien';
+}
+
+/* ── MODAL REJOINDRE ── */
+.join-question {
+  font-size: 14px; color: var(--text);
+  font-style: italic; line-height: 1.6;
+  padding: 14px; background: var(--bg);
+  border-radius: 12px;
+  border-left: 3px solid var(--accent);
+  margin-bottom: 16px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 700px) {
+  .conciles-wrap, .concile-page-wrap { flex-direction: column; }
+  .conciles-sidebar, .concile-page-sidebar { width: 100%; }
+  .concile-card { flex-direction: column; }
+  .concile-join-btn { margin-left: 0; width: 100%; }
+}

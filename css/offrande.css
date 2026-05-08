@@ -1,0 +1,130 @@
+.offr-wrap {
+  min-height: calc(100vh - 58px);
+  display: flex; align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, #f7f5f0, #ede8df);
+}
+
+.offr-box {
+  background: var(--surface);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  padding: 36px;
+  width: 100%; max-width: 480px;
+  box-shadow: var(--shadow);
+}
+
+.offr-step        { display: none; }
+.offr-step.active { display: block; }
+
+.offr-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px; letter-spacing: 2px;
+  color: var(--gold); margin-bottom: 6px;
+}
+
+.offr-to {
+  font-size: 16px; color: var(--text);
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── GRILLE MONTANTS ── */
+.montant-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.montant-card {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg);
+}
+
+.montant-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+}
+
+.montant-card.selected {
+  border-color: var(--accent);
+  background: rgba(91,78,203,0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(91,78,203,0.15);
+}
+
+.montant-icon  { font-size: 22px; margin-bottom: 6px; }
+.montant-name  { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.montant-price { font-size: 12px; font-weight: 700; color: var(--text); }
+
+/* ── RECAP ── */
+.recap-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.recap-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text2);
+  padding: 5px 0;
+}
+
+/* ── INSTRUCTIONS ── */
+.instruc-box {
+  background: rgba(91,78,203,0.04);
+  border: 1px solid rgba(91,78,203,0.15);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.instruc-title {
+  font-family: 'Cinzel', serif;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--accent); margin-bottom: 12px;
+}
+
+.instruc-list {
+  padding-left: 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.instruc-list li { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+/* ── BOUTON MAKETOU ── */
+.btn-maketou {
+  display: block; width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #1a8f4f, #14713d);
+  color: white; border: none;
+  border-radius: var(--radius);
+  font-family: 'Cinzel', serif;
+  font-size: 13px; letter-spacing: 2px;
+  text-align: center; text-decoration: none;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-maketou:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(26,143,79,0.3);
+}
+
+/* ── REF BOX ── */
+.ref-box { margin-top: 8px; }
+
+@media (max-width: 400px) {
+  .montant-grid { grid-template-columns: repeat(2, 1fr); }
+  .offr-box     { padding: 24px 16px; }
+}
