@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="/css/aether.css">
   <link rel="stylesheet" href="/css/flux.css">
 </head>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+  }
+</script>
 <body>
 
 <!-- NAVBAR -->
