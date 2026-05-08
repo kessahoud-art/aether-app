@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="/css/flux.css">
   <link rel="stylesheet" href="/css/temple.css">
 </head>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+  }
+</script>
 <body>
 
 <!-- NAVBAR -->
