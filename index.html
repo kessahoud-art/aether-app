@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Le Réseau des Âmes</title>
+  <meta name="description" content="Le premier réseau social qui t'élève. Publie des Souffles, tisse des Liens d'Âmes, rejoins des Conciles.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#b8860b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Aether">
+
+  <!-- OG -->
+  <meta property="og:title"       content="Aether — Le Réseau des Âmes">
+  <meta property="og:description" content="Le premier réseau social qui t'élève.">
+  <meta property="og:type"        content="website">
+
+  <link rel="stylesheet" href="/css/aether.css">
+  <style>
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      background: linear-gradient(160deg, #f7f5f0 0%, #ede8df 60%, #e0d8cc 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 30%, rgba(184,134,11,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 70%, rgba(91,78,203,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 8px;
+      color: var(--gold);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-logo-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--gold), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: white;
+    }
+
+    .hero-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(36px, 8vw, 64px);
+      font-weight: 700;
+      letter-spacing: 8px;
+      background: linear-gradient(135deg, var(--gold) 0%, #8b6914 40%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 3vw, 22px);
+      color: var(--text2);
+      max-width: 520px;
+      line-height: 1.7;
+      margin-bottom: 40px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-hero-primary {
+      padding: 15px 36px;
+      background: linear-gradient(135deg, var(--accent), #3d30a0);
+      color: white; border: none;
+      border-radius: 28px;
+      font-family: 'Cinzel', serif;
+      font-size: 13px; letter-spacing: 2px;
+      font-weight: 600;
+      cursor: pointer; transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-hero-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(91,78,203,0.35);
+    }
+
+    .btn-hero-outline {
+      padding: 15px 36px;
+      background: transparent;
+      color: var(--text2);
+      border: 1.5px solid var(--border2);
+      border-radius: 28px;
+      font-family: 'Cinzel', serif;
+      font-size: 13px; letter-spacing: 2px;
+      cursor: pointer; transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-hero-outline:hover {
+      border-color: var(--accent2);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .hero-scroll {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: var(--text3);
+      letter-spacing: 2px;
+      font-family: 'Cinzel', serif;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateX(-50%) translateY(0); }
+      50%      { transform: translateX(-50%) translateY(6px); }
+    }
+
+    /* ── STATS BAND ── */
+    .stats-band {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .band-stat {
+      flex: 1; max-width: 200px;
+      text-align: center;
+      padding: 0 24px;
+      border-right: 1px solid var(--border);
+    }
+    .band-stat:last-child { border-right: none; }
+
+    .band-num {
+      font-family: 'Cinzel', serif;
+      font-size: 28px; font-weight: 700;
+      background: linear-gradient(135deg, var(--gold), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .band-label { font-size: 12px; color: var(--text3); letter-spacing: 0.5px; }
+
+    /* ── FEATURES ── */
+    .features {
+      background: var(--bg);
+      padding: 80px 24px;
+    }
+
+    .features-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-heading {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 48px;
+      line-height: 1.3;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      transition: all 0.25s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow);
+      border-color: var(--border2);
+    }
+
+    .feature-icon {
+      width: 52px; height: 52px;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-family: 'Cinzel', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--text); margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .feature-desc {
+      font-size: 13px; color: var(--text2);
+      line-height: 1.7;
+    }
+
+    /* ── EMOTIONS ── */
+    .emotions-section {
+      background: var(--surface);
+      padding: 80px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .emotions-inner {
+      max-width: 960px; margin: 0 auto;
+    }
+
+    .emotions-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-top: 48px;
+    }
+
+    .emo-feature-card {
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform 0.25s;
+    }
+    .emo-feature-card:hover { transform: translateY(-4px); }
+
+    .emo-top {
+      height: 90px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+    }
+
+    .emo-body { padding: 14px; }
+
+    .emo-body-name {
+      font-family: 'Cinzel', serif;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; margin-bottom: 6px;
+    }
+
+    .emo-body-desc { font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+    /* ── KARMA ── */
+    .karma-section {
+      background: linear-gradient(160deg, #f7f5f0, #ede8df);
+      padding: 80px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .karma-inner { max-width: 700px; margin: 0 auto; text-align: center; }
+
+    .karma-rule {
+      font-size: clamp(18px, 3vw, 24px);
+      color: var(--text);
+      line-height: 1.8;
+      font-style: italic;
+      padding: 32px;
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      margin: 40px 0;
+      position: relative;
+    }
+
+    .karma-rule::before {
+      content: '✦';
+      position: absolute; top: -14px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      padding: 0 12px;
+      color: var(--gold);
+      font-size: 18px;
+    }
+
+    .karma-levels {
+      display: flex; gap: 8px;
+      justify-content: center; flex-wrap: wrap;
+      margin-top: 32px;
+    }
+
+    .karma-pill {
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── CTA FINAL ── */
+    .cta-section {
+      background: var(--text);
+      padding: 80px 24px;
+      text-align: center;
+    }
+
+    .cta-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      color: var(--bg);
+      letter-spacing: 4px;
+      margin-bottom: 16px;
+    }
+
+    .cta-sub {
+      font-size: 16px;
+      color: rgba(247,245,240,0.6);
+      margin-bottom: 36px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.7;
+    }
+
+    .btn-cta-white {
+      padding: 16px 40px;
+      background: var(--bg);
+      color: var(--text);
+      border: none;
+      border-radius: 28px;
+      font-family: 'Cinzel', serif;
+      font-size: 13px; letter-spacing: 2px;
+      font-weight: 700;
+      cursor: pointer; transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-cta-white:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: var(--text);
+      padding: 32px 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 14px; letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--gold), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .footer-links {
+      display: flex; gap: 24px;
+    }
+
+    .footer-link {
+      font-size: 12px; color: rgba(247,245,240,0.4);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .footer-link:hover { color: rgba(247,245,240,0.8); }
+
+    .footer-copy {
+      font-size: 11px;
+      color: rgba(247,245,240,0.3);
+    }
+
+    /* ── INSTALL BANNER ── */
+    .install-banner {
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: var(--bg);
+      padding: 14px 20px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 13px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      z-index: 999;
+      max-width: calc(100vw - 32px);
+      animation: slideUp 0.4s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+      to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
+
+    .install-banner button {
+      background: var(--gold);
+      color: var(--text);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px; letter-spacing: 1px;
+      font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
+
+    .install-close {
+      background: none !important;
+      color: rgba(247,245,240,0.5) !important;
+      padding: 0 !important;
+      font-size: 18px !important;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .emotions-grid { grid-template-columns: repeat(3, 1fr); }
+      .stats-band    { flex-wrap: wrap; }
+      .band-stat     { min-width: 45%; border-right: none; border-bottom: 1px solid var(--border); padding: 14px 0; }
+      .footer        { flex-direction: column; text-align: center; }
+      .footer-links  { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-logo">
+    <div class="hero-logo-icon">✦</div>
+    AETHER
+  </div>
+
+  <h1 class="hero-title">LE RÉSEAU<br>DES ÂMES</h1>
+
+  <p class="hero-sub">
+    Le premier réseau social conçu pour t'élever.
+    Pas pour t'accrocher. Chaque Souffle que tu publies
+    a un poids, une émotion, une trace éternelle.
+  </p>
+
+  <div class="hero-cta">
+    <a href="/signup" class="btn-hero-primary">✦ CRÉER MON TEMPLE</a>
+    <a href="/login"  class="btn-hero-outline">Se connecter</a>
+  </div>
+
+  <div class="hero-scroll">↓ DÉCOUVRIR</div>
+</section>
+
+<!-- STATS BAND -->
+<div class="stats-band" id="statsBand">
+  <div class="band-stat">
+    <div class="band-num" id="statUsers">0</div>
+    <div class="band-label">Âmes inscrites</div>
+  </div>
+  <div class="band-stat">
+    <div class="band-num" id="statSouffles">0</div>
+    <div class="band-label">Souffles publiés</div>
+  </div>
+  <div class="band-stat">
+    <div class="band-num" id="statConciles">0</div>
+    <div class="band-label">Conciles actifs</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-inner">
+    <div class="section-title">✦ FONCTIONNALITÉS</div>
+    <h2 class="section-heading">Tout ce qui fait d'Aether<br>un réseau différent</h2>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(184,134,11,0.1)">🏛️</div>
+        <div class="feature-title">Le Temple</div>
+        <div class="feature-desc">
+          Ton profil n'est pas une page. C'est un Temple vivant
+          qui évolue selon ton karma et ta sagesse accumulée.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(91,78,203,0.1)">💨</div>
+        <div class="feature-title">Les Souffles</div>
+        <div class="feature-desc">
+          Chaque publication est typée émotionnellement.
+          Impossible de mentir sur ce que tu ressens. Impossible de supprimer.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(46,125,50,0.1)">🔗</div>
+        <div class="feature-title">Liens d'Âmes</div>
+        <div class="feature-desc">
+          On ne "follow" pas sur Aether. On crée un Lien d'Âme —
+          une connexion consciente avec ceux qui comptent vraiment.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(106,27,154,0.1)">🔮</div>
+        <div class="feature-title">Les Conciles</div>
+        <div class="feature-desc">
+          Des communautés avec intention. Pour rejoindre un Concile
+          Initiatique, tu dois répondre à une question. L'accès se mérite.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(184,134,11,0.1)">⚡</div>
+        <div class="feature-title">Le Karma</div>
+        <div class="feature-desc">
+          Ton karma influence ta visibilité. Plus tu contribues
+          sincèrement, plus tu rayonnes. Aucun boost à acheter.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(46,125,50,0.1)">💎</div>
+        <div class="feature-title">Les Offrandes</div>
+        <div class="feature-desc">
+          Les créateurs reçoivent des dons directs de leur communauté.
+          Pas de publicité. Juste de la gratitude sincère.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(91,78,203,0.1)">📜</div>
+        <div class="feature-title">La Chronique</div>
+        <div class="feature-desc">
+          Chaque Souffle est gravé à jamais dans ta Chronique Akashique.
+          La parole a du poids. On s'en souvient.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(184,134,11,0.1)">✦</div>
+        <div class="feature-title">Souffle Ascendant</div>
+        <div class="feature-desc">
+          Quand ton Souffle touche plusieurs types d'émotions différentes,
+          il devient Ascendant. La viralité se mérite ici.
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(46,125,50,0.1)">📱</div>
+        <div class="feature-title">Application Mobile</div>
+        <div class="feature-desc">
+          Installe Aether directement sur ton téléphone.
+          Fonctionne hors-ligne. Aucun Store requis.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ÉMOTIONS -->
+<section class="emotions-section">
+  <div class="emotions-inner">
+    <div class="section-title">✦ LES 5 ÉMOTIONS</div>
+    <h2 class="section-heading">Chaque Souffle a une couleur</h2>
+
+    <div class="emotions-grid">
+      <div class="emo-feature-card">
+        <div class="emo-top" style="background:#fff3f0">🔥</div>
+        <div class="emo-body">
+          <div class="emo-body-name" style="color:#e64a19">FEU</div>
+          <div class="emo-body-desc">Passion · Indignation · Fougue</div>
+        </div>
+      </div>
+      <div class="emo-feature-card">
+        <div class="emo-top" style="background:#f0f4ff">💧</div>
+        <div class="emo-body">
+          <div class="emo-body-name" style="color:#1565c0">EAU</div>
+          <div class="emo-body-desc">Douceur · Empathie · Nostalgie</div>
+        </div>
+      </div>
+      <div class="emo-feature-card">
+        <div class="emo-top" style="background:#f0fff2">🌿</div>
+        <div class="emo-body">
+          <div class="emo-body-name" style="color:#2e7d32">TERRE</div>
+          <div class="emo-body-desc">Sagesse · Ancrage · Conseil</div>
+        </div>
+      </div>
+      <div class="emo-feature-card">
+        <div class="emo-top" style="background:#fffde7">⚡</div>
+        <div class="emo-body">
+          <div class="emo-body-name" style="color:#e65100">ÉCLAIR</div>
+          <div class="emo-body-desc">Humour · Surprise · Révélation</div>
+        </div>
+      </div>
+      <div class="emo-feature-card">
+        <div class="emo-top" style="background:#f8f0ff">🌫️</div>
+        <div class="emo-body">
+          <div class="emo-body-name" style="color:#6a1b9a">BRUME</div>
+          <div class="emo-body-desc">Mystère · Doute · Méditation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- KARMA -->
+<section class="karma-section">
+  <div class="karma-inner">
+    <div class="section-title">✦ LE KARMA</div>
+    <h2 class="section-heading">La loi fondamentale d'Aether</h2>
+
+    <div class="karma-rule">
+      "Plus tu donnes sincèrement,
+      plus tu es visible.
+      Plus tu es toxique,
+      plus tu disparais."
+    </div>
+
+    <div class="karma-levels">
+      <span class="karma-pill" style="background:rgba(74,72,112,0.1);color:#4a4870">🌫️ Novice</span>
+      <span class="karma-pill" style="background:rgba(125,122,168,0.1);color:#7d7aa8">🌿 Initié</span>
+      <span class="karma-pill" style="background:rgba(91,78,203,0.1);color:var(--accent)">🔮 Gardien</span>
+      <span class="karma-pill" style="background:rgba(184,134,11,0.1);color:var(--gold)">⚡ Sage</span>
+      <span class="karma-pill" style="background:linear-gradient(135deg,rgba(184,134,11,0.15),rgba(91,78,203,0.15));color:var(--gold)">✦ Divin</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="cta-title">PRÊT À SOUFFLER ?</div>
+  <p class="cta-sub">
+    Rejoins la première communauté où chaque mot compte,
+    chaque lien est sacré, et chaque don est sincère.
+  </p>
+  <a href="/signup" class="btn-cta-white">✦ CRÉER MON TEMPLE GRATUITEMENT</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">✦ AETHER</div>
+  <div class="footer-links">
+    <a href="/flux"     class="footer-link">Flux</a>
+    <a href="/conciles" class="footer-link">Conciles</a>
+    <a href="/signup"   class="footer-link">S'inscrire</a>
+    <a href="/login"    class="footer-link">Connexion</a>
+  </div>
+  <div class="footer-copy">© 2025 Aether · Tous droits réservés</div>
+</footer>
+
+<!-- INSTALL BANNER PWA -->
+<div class="install-banner hidden" id="installBanner">
+  <span>📱 Installe Aether sur ton téléphone</span>
+  <button onclick="installPWA()">INSTALLER</button>
+  <button class="install-close" onclick="closeInstall()">×</button>
+</div>
+
+<script type="module">
+  import { supabase } from '/lib/supabase.js'
+
+  // ── Stats publiques ──
+  async function loadStats() {
+    const [
+      { count: users },
+      { count: souffles },
+      { count: conciles },
+    ] = await Promise.all([
+      supabase.from('entities').select('id', { count: 'exact', head: true }),
+      supabase.from('souffles').select('id', { count: 'exact', head: true }).eq('is_veiled', false),
+      supabase.from('conciles').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    ])
+
+    animateCount('statUsers',    users    || 0)
+    animateCount('statSouffles', souffles || 0)
+    animateCount('statConciles', conciles || 0)
+  }
+
+  function animateCount(id, target) {
+    const el = document.getElementById(id)
+    let current = 0
+    const step = Math.ceil(target / 40)
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target)
+      el.textContent = current.toLocaleString('fr-FR')
+      if (current >= target) clearInterval(timer)
+    }, 30)
+  }
+
+  loadStats()
+
+  // ── Rediriger si déjà connecté ──
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) window.location.href = '/flux'
+
+  // ── PWA Install ──
+  let deferredPrompt = null
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault()
+    deferredPrompt = e
+    setTimeout(() => {
+      document.getElementById('installBanner').classList.remove('hidden')
+    }, 3000)
+  })
+
+  window.installPWA = async function() {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    deferredPrompt = null
+    document.getElementById('installBanner').classList.add('hidden')
+  }
+
+  window.closeInstall = () =>
+    document.getElementById('installBanner').classList.add('hidden')
+
+  // ── Register Service Worker ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .catch(err => console.log('SW error:', err))
+  }
+</script>
+
+<!-- Ajouter SW sur toutes les pages aussi -->
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+  }
+</script>
+</body>
+</html>
