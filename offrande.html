@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Offrir</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/offrande.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"     class="nav-item">🌊 Flux</a>
+    <a href="/conciles" class="nav-item">🔮 Conciles</a>
+    <a href="/temple"   class="nav-item">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="offr-wrap">
+  <div class="offr-box">
+
+    <!-- ÉTAPE 1 : Choisir montant -->
+    <div class="offr-step active" id="step-1">
+      <div class="offr-title">💎 OFFRIR UNE OFFRANDE</div>
+      <div class="offr-to" id="offrTo">À — chargement...</div>
+
+      <div class="montant-grid" id="montantGrid">
+        <!-- injecté en JS -->
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label>Message (optionnel)</label>
+        <textarea id="message"
+          placeholder="Ce que tu veux dire au créateur..."
+          maxlength="200"></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="btnEtape2" onclick="goEtape2()">
+        CONTINUER →
+      </button>
+
+      <div id="step1Msg" class="hidden" style="margin-top:12px"></div>
+    </div>
+
+    <!-- ÉTAPE 2 : Payer sur Maketou -->
+    <div class="offr-step" id="step-2">
+      <div class="offr-title">💎 PROCÉDER AU PAIEMENT</div>
+
+      <div class="recap-box" id="recapBox">
+        <!-- injecté en JS -->
+      </div>
+
+      <div class="instruc-box">
+        <div class="instruc-title">📋 COMMENT PAYER</div>
+        <ol class="instruc-list">
+          <li>Clique sur le bouton ci-dessous</li>
+          <li>Tu arrives sur la page de paiement Maketou</li>
+          <li>Choisis ton réseau Mobile Money ou carte</li>
+          <li>Effectue le paiement</li>
+          <li>Reviens ici et clique "J'ai payé"</li>
+        </ol>
+      </div>
+
+      <a id="btnMaketou" href="#" target="_blank" class="btn-maketou">
+        PAYER SUR MAKETOU →
+      </a>
+
+      <button class="btn btn-primary" style="margin-top:12px" onclick="goEtape3()">
+        ✓ J'AI EFFECTUÉ LE PAIEMENT
+      </button>
+
+      <button class="btn btn-outline" style="margin-top:8px" onclick="goStep(1)">
+        ← Retour
+      </button>
+    </div>
+
+    <!-- ÉTAPE 3 : Confirmation -->
+    <div class="offr-step" id="step-3">
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:16px">⏳</div>
+        <div class="offr-title">EN ATTENTE DE CONFIRMATION</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.7;margin:12px 0 24px">
+          Ton offrande est enregistrée.<br>
+          Elle sera confirmée sous <strong>12h</strong> après vérification.<br>
+          Le créateur sera notifié dès validation.
+        </div>
+        <div class="ref-box" id="refBox">
+          <!-- référence injectée -->
+        </div>
+        <a href="/flux" class="btn btn-primary" style="display:block;margin-top:24px;text-decoration:none;text-align:center">
+          RETOUR AU FLUX
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logout, getEntity } from '/lib/auth.js'
+  import { supabase }    from '/lib/supabase.js'
+  import { MONTANTS, MAKETOU_LINKS, COMMISSION_RATE,
+           creerOffrande, declarerPaiement }  from '/lib/offrandes.js'
+  import { avatarInitials }                  from '/lib/utils.js'
+
+  let currentUser  = null
+  let targetEntity = null
+  let selectedMontant = null
+  let offrande        = null
+
+  currentUser = await requireAuth()
+
+  // Récupérer le créateur depuis URL
+  const params   = new URLSearchParams(window.location.search)
+  const username = params.get('u')
+  if (!username) { window.location.href = '/flux'; return }
+
+  const { data } = await supabase
+    .from('entities')
+    .select('*')
+    .eq('username', username)
+    .single()
+  targetEntity = data
+
+  if (!targetEntity || targetEntity.id === currentUser.id) {
+    window.location.href = '/flux'
+    return
+  }
+
+  document.getElementById('offrTo').innerHTML = `
+    <span style="font-size:13px;color:var(--text3)">Offrande pour</span>
+    <strong style="font-size:16px;margin-left:6px">${targetEntity.display_name}</strong>
+  `
+
+  // Grille montants
+  document.getElementById('montantGrid').innerHTML = MONTANTS.map(m => `
+    <div class="montant-card" data-value="${m.value}" onclick="selectMontant(this, ${m.value})">
+      <div class="montant-icon">${m.icon}</div>
+      <div class="montant-name">${m.name}</div>
+      <div class="montant-price">${m.label}</div>
+    </div>
+  `).join('')
+
+  window.selectMontant = function(el, value) {
+    document.querySelectorAll('.montant-card').forEach(c => c.classList.remove('selected'))
+    el.classList.add('selected')
+    selectedMontant = value
+  }
+
+  window.goEtape2 = async function() {
+    if (!selectedMontant) {
+      const msg = document.getElementById('step1Msg')
+      msg.className = 'msg-error'
+      msg.textContent = 'Choisis un montant.'
+      return
+    }
+    const message = document.getElementById('message').value.trim()
+    const btn = document.getElementById('btnEtape2')
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+
+    const { data, error } = await creerOffrande({
+      fromId:  currentUser.id,
+      toId:    targetEntity.id,
+      amount:  selectedMontant,
+      message
+    })
+
+    btn.disabled = false
+    btn.textContent = 'CONTINUER →'
+
+    if (error) {
+      const msg = document.getElementById('step1Msg')
+      msg.className = 'msg-error'
+      msg.textContent = error.message
+      return
+    }
+
+    offrande = data
+    const commission = Math.round(selectedMontant * COMMISSION_RATE)
+    const net = selectedMontant - commission
+
+    document.getElementById('recapBox').innerHTML = `
+      <div class="recap-row">
+        <span>Montant</span>
+        <strong>${selectedMontant.toLocaleString('fr-FR')} FCFA</strong>
+      </div>
+      <div class="recap-row">
+        <span>Commission Aether (8%)</span>
+        <span style="color:var(--text3)">−${commission.toLocaleString('fr-FR')} FCFA</span>
+      </div>
+      <div class="recap-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+        <span>Créateur recevra</span>
+        <strong style="color:var(--success)">${net.toLocaleString('fr-FR')} FCFA</strong>
+      </div>
+      <div class="recap-row" style="margin-top:8px;font-size:11px;color:var(--text3)">
+        <span>Référence</span>
+        <code style="background:var(--bg);padding:2px 8px;border-radius:6px">${data.reference}</code>
+      </div>
+    `
+
+    document.getElementById('btnMaketou').href = MAKETOU_LINKS[selectedMontant] || '#'
+    goStep(2)
+  }
+
+  window.goEtape3 = async function() {
+    if (!offrande) return
+    await declarerPaiement(offrande.id)
+    document.getElementById('refBox').innerHTML = `
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:13px">
+        <div style="color:var(--text3);font-size:11px;margin-bottom:6px;font-family:'Cinzel',serif;letter-spacing:1px">
+          TA RÉFÉRENCE
+        </div>
+        <code style="font-size:18px;font-weight:700;color:var(--accent);letter-spacing:2px">
+          ${offrande.reference}
+        </code>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">
+          Garde-la en cas de besoin
+        </div>
+      </div>
+    `
+    goStep(3)
+  }
+
+  window.goStep = function(n) {
+    document.querySelectorAll('.offr-step').forEach(s => s.classList.remove('active'))
+    document.getElementById(`step-${n}`).classList.add('active')
+  }
+
+  window.handleLogout = logout
+</script>
+</body>
+</html>

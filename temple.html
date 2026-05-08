@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Temple</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/temple.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"     class="nav-item">🌊 Flux</a>
+    <a href="/conciles" class="nav-item">🔮 Conciles</a>
+    <a href="/temple"   class="nav-item active">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="temple-wrap">
+
+  <!-- BANNER -->
+  <div class="temple-banner">
+    <div class="banner-overlay"></div>
+    <div class="banner-pattern"></div>
+  </div>
+
+  <!-- PROFIL -->
+  <div class="temple-profile">
+
+    <div class="temple-avatar" id="templeAvatar">?</div>
+
+    <div class="temple-actions" id="templeActions">
+      <!-- Boutons injectés dynamiquement -->
+    </div>
+
+    <div class="temple-name"    id="templeName">Chargement...</div>
+
+    <div class="temple-handle">
+      <span id="templeHandle">@—</span>
+      <span class="karma-badge" id="templeKarma">✦ —</span>
+    </div>
+
+    <span class="aura-badge" id="templeAura"></span>
+
+    <div class="temple-intention" id="templeIntention">
+      <span class="intention-label">MON INTENTION</span>
+      <span id="intentionText">—</span>
+    </div>
+
+    <div class="temple-stats">
+      <div class="stat-item">
+        <span class="stat-num" id="statSouffles">0</span>
+        <div class="stat-label">Souffles</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="statLiens">0</span>
+        <div class="stat-label">Liens d'Âmes</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="statKarma">0</span>
+        <div class="stat-label">Karma</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="statSagesse">1</span>
+        <div class="stat-label">Sagesse</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLETS -->
+  <div class="temple-tabs">
+    <button class="tab-btn active" onclick="switchTab('souffles', this)">💨 Souffles</button>
+    <button class="tab-btn"        onclick="switchTab('resonances', this)">✨ Résonances</button>
+    <button class="tab-btn"        onclick="switchTab('chronique', this)">📜 Chronique</button>
+  </div>
+
+  <!-- CONTENU ONGLETS -->
+  <div class="tab-content active" id="tab-souffles">
+    <div id="templePostsList">
+      <div class="feed-loading">Chargement des Souffles...</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-resonances">
+    <div id="templeResList">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-chronique">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:32px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">📜</div>
+      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:var(--gold);margin-bottom:8px">CHRONIQUE AKASHIQUE</div>
+      <div style="font-size:13px;color:var(--text3);line-height:1.7">
+        Chaque Souffle que tu envoies est gravé ici pour l'éternité.<br>
+        Immuable. Authentique. Bientôt disponible.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL EDIT TEMPLE -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>✦ MODIFIER TON TEMPLE</span>
+      <button class="modal-close" onclick="closeEdit()">×</button>
+    </div>
+
+    <div class="field">
+      <label>Nom d'âme</label>
+      <input type="text" id="editName" maxlength="40" />
+    </div>
+
+    <div class="field">
+      <label>Mon intention</label>
+      <textarea id="editIntention" maxlength="200"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Aura dominante</label>
+      <div class="aura-grid" style="margin-bottom:0">
+        <div class="aura-option" data-aura="feu"    onclick="selectEditAura(this)">
+          <span class="aura-icon">🔥</span>
+          <span class="aura-label" style="color:#e64a19">FEU</span>
+        </div>
+        <div class="aura-option" data-aura="eau"    onclick="selectEditAura(this)">
+          <span class="aura-icon">💧</span>
+          <span class="aura-label" style="color:#1565c0">EAU</span>
+        </div>
+        <div class="aura-option" data-aura="terre"  onclick="selectEditAura(this)">
+          <span class="aura-icon">🌿</span>
+          <span class="aura-label" style="color:#2e7d32">TERRE</span>
+        </div>
+        <div class="aura-option" data-aura="eclair" onclick="selectEditAura(this)">
+          <span class="aura-icon">⚡</span>
+          <span class="aura-label" style="color:#e65100">ÉCLAIR</span>
+        </div>
+        <div class="aura-option" data-aura="brume"  onclick="selectEditAura(this)">
+          <span class="aura-icon">🌫️</span>
+          <span class="aura-label" style="color:#6a1b9a">BRUME</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="saveBtn" onclick="saveTemple()">
+      SAUVEGARDER
+    </button>
+
+    <div id="editMsg" class="hidden" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase }              from '/lib/supabase.js'
+  import { requireAuth, logout, getEntity } from '/lib/auth.js'
+  import { getFeed }               from '/lib/souffles.js'
+  import { EMOTIONS, timeAgo, avatarInitials } from '/lib/utils.js'
+
+  let currentUser   = null
+  let viewedEntity  = null
+  let isSelf        = false
+  let editAura      = 'terre'
+
+  // ── INIT ──
+  currentUser = await requireAuth()
+
+  const params   = new URLSearchParams(window.location.search)
+  const username = params.get('u')
+
+  if (username) {
+    const { data } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('username', username)
+      .single()
+    viewedEntity = data
+  } else {
+    viewedEntity = await getEntity(currentUser.id)
+  }
+
+  if (!viewedEntity) {
+    document.querySelector('.temple-wrap').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">🏚️</div>Temple introuvable.</div>'
+    return
+  }
+
+  isSelf = viewedEntity.id === currentUser.id
+
+  renderProfile()
+  await loadSouffles()
+  await loadStats()
+
+  // ── RENDU PROFIL ──
+  function renderProfile() {
+    const e = EMOTIONS[viewedEntity.aura_color] || EMOTIONS.terre
+
+    document.getElementById('templeAvatar').textContent =
+      avatarInitials(viewedEntity.display_name || '')
+    document.getElementById('templeAvatar').style.background = e.bg
+    document.getElementById('templeAvatar').style.color      = e.color
+    document.getElementById('templeAvatar').style.border     = `3px solid ${e.border}`
+
+    document.getElementById('templeName').textContent =
+      viewedEntity.display_name || viewedEntity.username
+    document.getElementById('templeHandle').textContent =
+      `@${viewedEntity.username}`
+    document.getElementById('templeKarma').textContent =
+      `✦ Karma ${(viewedEntity.karma_score || 0).toLocaleString('fr-FR')}`
+    document.getElementById('statKarma').textContent =
+      (viewedEntity.karma_score || 0).toLocaleString('fr-FR')
+    document.getElementById('statSagesse').textContent =
+      viewedEntity.wisdom_level || 1
+
+    const auraBadge = document.getElementById('templeAura')
+    auraBadge.textContent  = `${e.icon} Âme de ${e.label}`
+    auraBadge.style.background = e.bg
+    auraBadge.style.color      = e.color
+    auraBadge.style.border     = `1px solid ${e.border}`
+    auraBadge.style.padding    = '3px 12px'
+    auraBadge.style.borderRadius = '10px'
+    auraBadge.style.fontSize   = '12px'
+    auraBadge.style.fontWeight = '600'
+    auraBadge.style.display    = 'inline-block'
+    auraBadge.style.marginTop  = '8px'
+
+    document.getElementById('intentionText').textContent =
+      viewedEntity.intention || 'Aucune intention définie.'
+
+    document.title = `Aether — Temple de ${viewedEntity.display_name}`
+
+    // Boutons actions
+    const actionsEl = document.getElementById('templeActions')
+    if (isSelf) {
+      actionsEl.innerHTML = `
+        <button class="btn-edit-temple" onclick="openEdit()">✏️ Modifier</button>
+      `
+    } else {
+      actionsEl.innerHTML = `
+        <button class="btn-lien" id="btnLien" onclick="toggleLien()">
+          🔗 Lier mon Âme
+        </button>
+      `
+      checkLien()
+    }
+  }
+
+  // ── STATS ──
+  async function loadStats() {
+    const { count: soufflesCount } = await supabase
+      .from('souffles')
+      .select('id', { count: 'exact', head: true })
+      .eq('entity_id', viewedEntity.id)
+      .eq('is_veiled', false)
+
+    const { count: liensCount } = await supabase
+      .from('soul_links')
+      .select('id', { count: 'exact', head: true })
+      .eq('from_entity_id', viewedEntity.id)
+
+    document.getElementById('statSouffles').textContent =
+      (soufflesCount || 0).toLocaleString('fr-FR')
+    document.getElementById('statLiens').textContent =
+      (liensCount || 0).toLocaleString('fr-FR')
+  }
+
+  // ── SOUFFLES DU TEMPLE ──
+  async function loadSouffles() {
+    const { data, error } = await supabase
+      .from('souffles')
+      .select('*, entities(display_name, username, aura_color, wisdom_level), resonances(id, emotion, entity_id)')
+      .eq('entity_id', viewedEntity.id)
+      .eq('is_veiled', false)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    const list = document.getElementById('templePostsList')
+
+    if (error || !data?.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">💨</div>
+          ${isSelf ? 'Tu n\'as pas encore soufflé.' : 'Ce Temple est silencieux.'}
+        </div>`
+      return
+    }
+
+    list.innerHTML = data.map(s => buildCard(s)).join('')
+  }
+
+  // ── RÉSONANCES REÇUES ──
+  window.switchTab = function(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+    btn.classList.add('active')
+    document.getElementById(`tab-${tab}`).classList.add('active')
+
+    if (tab === 'resonances') loadResonances()
+  }
+
+  async function loadResonances() {
+    const list = document.getElementById('templeResList')
+    list.innerHTML = '<div class="feed-loading">Chargement...</div>'
+
+    const { data } = await supabase
+      .from('resonances')
+      .select('*, souffles(id, content, emotion, created_at, entities(display_name, username))')
+      .eq('entity_id', viewedEntity.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (!data?.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">✨</div>Aucune résonance pour l\'instant.</div>'
+      return
+    }
+
+    list.innerHTML = data.map(r => {
+      const s = r.souffles
+      const e = EMOTIONS[s?.emotion] || EMOTIONS.terre
+      return `
+      <div style="background:var(--surface);border:1px solid ${e.border};border-radius:16px;padding:16px;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">
+          ${e.icon} Résonné avec · ${timeAgo(r.created_at)}
+        </div>
+        <p style="font-size:14px;color:var(--text);line-height:1.6">
+          ${escHtml(s?.content || '')}
+        </p>
+        <div style="font-size:12px;color:var(--text3);margin-top:8px">
+          par @${s?.entities?.username || '—'}
+        </div>
+      </div>`
+    }).join('')
+  }
+
+  // ── LIEN D'ÂME ──
+  async function checkLien() {
+    const { data } = await supabase
+      .from('soul_links')
+      .select('id')
+      .eq('from_entity_id', currentUser.id)
+      .eq('to_entity_id', viewedEntity.id)
+      .single()
+
+    const btn = document.getElementById('btnLien')
+    if (btn && data) {
+      btn.textContent = '✓ Âmes Liées'
+      btn.classList.add('linked')
+    }
+  }
+
+  window.toggleLien = async function() {
+    const btn = document.getElementById('btnLien')
+    const isLinked = btn.classList.contains('linked')
+
+    if (isLinked) {
+      await supabase.from('soul_links')
+        .delete()
+        .eq('from_entity_id', currentUser.id)
+        .eq('to_entity_id', viewedEntity.id)
+      btn.textContent = '🔗 Lier mon Âme'
+      btn.classList.remove('linked')
+    } else {
+      await supabase.from('soul_links')
+        .insert({ from_entity_id: currentUser.id, to_entity_id: viewedEntity.id })
+      btn.textContent = '✓ Âmes Liées'
+      btn.classList.add('linked')
+      await supabase.rpc('increment_karma', { uid: currentUser.id, delta: 5 })
+    }
+  }
+
+  // ── EDIT TEMPLE ──
+  window.openEdit = function() {
+    document.getElementById('editName').value      = viewedEntity.display_name || ''
+    document.getElementById('editIntention').value = viewedEntity.intention    || ''
+    editAura = viewedEntity.aura_color || 'terre'
+    document.querySelectorAll('.aura-option').forEach(o => {
+      o.classList.toggle('selected', o.dataset.aura === editAura)
+    })
+    document.getElementById('editModal').classList.remove('hidden')
+  }
+
+  window.closeEdit = function() {
+    document.getElementById('editModal').classList.add('hidden')
+  }
+
+  window.selectEditAura = function(el) {
+    document.querySelectorAll('.aura-option').forEach(o => o.classList.remove('selected'))
+    el.classList.add('selected')
+    editAura = el.dataset.aura
+  }
+
+  window.saveTemple = async function() {
+    const btn       = document.getElementById('saveBtn')
+    const name      = document.getElementById('editName').value.trim()
+    const intention = document.getElementById('editIntention').value.trim()
+    const msgBox    = document.getElementById('editMsg')
+
+    if (!name) return
+
+    btn.disabled    = true
+    btn.innerHTML   = '<span class="loader"></span>'
+    msgBox.className = 'hidden'
+
+    const { error } = await supabase
+      .from('entities')
+      .update({ display_name: name, intention, aura_color: editAura })
+      .eq('id', currentUser.id)
+
+    btn.disabled  = false
+    btn.textContent = 'SAUVEGARDER'
+
+    if (error) {
+      msgBox.className = 'msg-error'
+      msgBox.textContent = error.message
+      return
+    }
+
+    viewedEntity.display_name = name
+    viewedEntity.intention    = intention
+    viewedEntity.aura_color   = editAura
+
+    renderProfile()
+    closeEdit()
+  }
+
+  // ── BUILD CARD ──
+  function buildCard(s) {
+    const e      = EMOTIONS[s.emotion] || EMOTIONS.terre
+    const entity = s.entities || {}
+    const resCount = s.resonances?.length || 0
+    const hasRes = s.resonances?.some(r => r.entity_id === currentUser.id)
+
+    return `
+    <article class="souffle-card" style="border-left:3px solid ${e.border}">
+      <div class="card-top">
+        <div class="card-avatar" style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+          ${avatarInitials(entity.display_name || '?')}
+        </div>
+        <div class="card-meta">
+          <span class="card-name">${entity.display_name || 'Anonyme'}</span>
+          <span class="wisdom-pill">Sagesse ${entity.wisdom_level || 1}</span>
+        </div>
+        <div class="card-time">${timeAgo(s.created_at)}</div>
+      </div>
+      <div class="emotion-tag" style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
+        ${e.icon} ${e.label}
+      </div>
+      <p class="card-content">${escHtml(s.content)}</p>
+      <div class="card-actions">
+        <button class="action-btn ${hasRes ? 'active' : ''}" onclick="handleRes('${s.id}', this)">
+          ✨ <span>${resCount}</span>
+        </button>
+        ${isSelf ? `<button class="action-btn danger" onclick="voilerSouffle('${s.id}', this)">👁️ Voiler</button>` : ''}
+      </div>
+    </article>`
+  }
+
+  window.handleRes = async function(souffleId, btn) {
+    const { resonner } = await import('/lib/souffles.js')
+    const { action } = await resonner(currentUser.id, souffleId, 'terre')
+    const countEl = btn.querySelector('span')
+    const count = parseInt(countEl.textContent)
+    if (action === 'added') { countEl.textContent = count + 1; btn.classList.add('active') }
+    else { countEl.textContent = Math.max(0, count - 1); btn.classList.remove('active') }
+  }
+
+  window.voilerSouffle = async function(souffleId, btn) {
+    if (!confirm('Voiler ce Souffle ?')) return
+    const { supabase } = await import('/lib/supabase.js')
+    await supabase.from('souffles').update({ is_veiled: true }).eq('id', souffleId)
+    btn.closest('.souffle-card').remove()
+  }
+
+  window.handleLogout = logout
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+</script>
+</body>
+</html>

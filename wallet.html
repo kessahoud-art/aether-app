@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Wallet</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/offrande.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"     class="nav-item">🌊 Flux</a>
+    <a href="/conciles" class="nav-item">🔮 Conciles</a>
+    <a href="/temple"   class="nav-item active">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div style="max-width:640px;margin:0 auto;padding:24px 16px">
+
+  <!-- SOLDE -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:16px;box-shadow:var(--shadow)">
+
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:var(--gold);margin-bottom:20px">
+      💎 MON WALLET
+    </div>
+
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:8px">
+        SOLDE DISPONIBLE
+      </div>
+      <div id="soldeNum" style="font-family:'Cinzel',serif;font-size:40px;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+        —
+      </div>
+      <div style="font-size:13px;color:var(--text3);margin-top:4px">FCFA</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+      <div style="background:var(--bg);border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border)">
+        <div id="totalIn" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--success)">—</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Total reçu</div>
+      </div>
+      <div style="background:var(--bg);border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border)">
+        <div id="totalOut" style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--accent)">—</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Total retiré</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="openRetrait()">
+      💸 DEMANDER UN RETRAIT
+    </button>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)">
+    <div style="padding:18px 20px;border-bottom:1px solid var(--border);font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:var(--gold)">
+      📋 HISTORIQUE
+    </div>
+    <div id="historiqueList">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL RETRAIT -->
+<div class="modal-overlay hidden" id="retraitModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>💸 DEMANDER UN RETRAIT</span>
+      <button class="modal-close" onclick="closeRetrait()">×</button>
+    </div>
+
+    <div id="soldeInfo" style="background:var(--bg);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--text2)">
+      Solde : <strong id="soldeDispo">—</strong> FCFA
+    </div>
+
+    <div class="field">
+      <label>Montant à retirer (min 1 000 FCFA)</label>
+      <input type="number" id="retraitAmount" placeholder="Ex: 5000" min="1000" />
+    </div>
+
+    <div class="field">
+      <label>Méthode</label>
+      <select id="retraitMethod" onchange="toggleMethode()">
+        <option value="mobile_money">📱 Mobile Money</option>
+        <option value="carte">💳 Carte bancaire</option>
+        <option value="international">🌍 Virement international</option>
+      </select>
+    </div>
+
+    <div id="mmFields">
+      <div class="field">
+        <label>Réseau</label>
+        <select id="retraitReseau">
+          <option value="mtn">MTN Mobile Money</option>
+          <option value="orange">Orange Money</option>
+          <option value="moov">Moov Money</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Numéro Mobile Money</label>
+        <input type="tel" id="retraitNumero" placeholder="Ex: +229 97 00 00 00" />
+      </div>
+    </div>
+
+    <div id="autreFields" class="hidden">
+      <div class="field">
+        <label>Numéro / IBAN / Coordonnées</label>
+        <input type="text" id="retraitAutre" placeholder="Numéro de carte ou IBAN" />
+      </div>
+    </div>
+
+    <div style="background:rgba(184,134,11,0.06);border:1px solid rgba(184,134,11,0.2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6">
+      ⚠️ Maketou prend <strong>5%</strong> de frais au retrait.<br>
+      Ex: retrait 1 000 FCFA → tu reçois <strong>950 FCFA</strong><br>
+      Traitement sous <strong>24-48h</strong>.
+    </div>
+
+    <button class="btn btn-primary" id="btnRetrait" onclick="soumettreRetrait()">
+      ENVOYER LA DEMANDE
+    </button>
+    <div id="retraitMsg" class="hidden" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logout }              from '/lib/auth.js'
+  import { getWallet, getOffrandes,
+           demanderRetrait }                  from '/lib/offrandes.js'
+  import { supabase }                         from '/lib/supabase.js'
+
+  let currentUser = null
+  let wallet      = null
+
+  currentUser = await requireAuth()
+  wallet = await getWallet(currentUser.id)
+
+  if (!wallet) {
+    // Créer le wallet s'il n'existe pas
+    await supabase.from('wallets').insert({ entity_id: currentUser.id })
+    wallet = { balance: 0, total_in: 0, total_out: 0 }
+  }
+
+  renderSolde()
+  await loadHistorique()
+
+  function renderSolde() {
+    document.getElementById('soldeNum').textContent  = (wallet.balance || 0).toLocaleString('fr-FR')
+    document.getElementById('totalIn').textContent   = (wallet.total_in || 0).toLocaleString('fr-FR')
+    document.getElementById('totalOut').textContent  = (wallet.total_out || 0).toLocaleString('fr-FR')
+    document.getElementById('soldeDispo').textContent = (wallet.balance || 0).toLocaleString('fr-FR')
+  }
+
+  async function loadHistorique() {
+    const data = await getOffrandes(currentUser.id)
+    const list = document.getElementById('historiqueList')
+
+    // Retraits aussi
+    const { data: retraits } = await supabase
+      .from('retraits')
+      .select('*')
+      .eq('entity_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (!data.length && !retraits?.length) {
+      list.innerHTML = '<div class="feed-empty">Aucune transaction.</div>'
+      return
+    }
+
+    const statusLabel = {
+      pending:                '⏳ En attente',
+      awaiting_confirmation:  '🔍 En vérification',
+      completed:              '✓ Confirmé',
+      failed:                 '✗ Échoué',
+      processing:             '⚙️ En cours',
+    }
+
+    const statusColor = {
+      pending:                'var(--text3)',
+      awaiting_confirmation:  'var(--gold)',
+      completed:              'var(--success)',
+      failed:                 'var(--error)',
+      processing:             'var(--accent)',
+    }
+
+    const offHtml = data.map(o => {
+      const isReceived = o.to_entity_id === currentUser.id
+      const other = isReceived ? o.from_entity : o.to_entity
+      const amount = isReceived ? o.net_amount : o.amount
+      const sign   = isReceived ? '+' : '−'
+      const color  = isReceived ? 'var(--success)' : 'var(--text)'
+
+      return `
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:24px">${isReceived ? '💎' : '🎁'}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">
+            ${isReceived ? 'Offrande reçue' : 'Offrande envoyée'}
+          </div>
+          <div style="font-size:11px;color:var(--text3)">
+            ${isReceived ? 'de' : 'à'} @${other?.username || '—'}
+            ${o.message ? `· "${o.message.slice(0,40)}${o.message.length>40?'...':''}"` : ''}
+          </div>
+          <div style="font-size:11px;margin-top:3px" class="${statusColor[o.status]}">
+            ${statusLabel[o.status] || o.status}
+          </div>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:${color}">
+          ${sign}${amount.toLocaleString('fr-FR')} F
+        </div>
+      </div>`
+    }).join('')
+
+    const retHtml = (retraits || []).map(r => `
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:24px">💸</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Retrait</div>
+          <div style="font-size:11px;color:var(--text3)">${r.reseau || r.method} · ${r.numero}</div>
+          <div style="font-size:11px;margin-top:3px;color:${statusColor[r.status]}">
+            ${statusLabel[r.status] || r.status}
+          </div>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--error)">
+          −${r.amount.toLocaleString('fr-FR')} F
+        </div>
+      </div>`).join('')
+
+    list.innerHTML = offHtml + retHtml || '<div class="feed-empty">Aucune transaction.</div>'
+  }
+
+  // ── RETRAIT ──
+  window.openRetrait = function() {
+    document.getElementById('soldeDispo').textContent = (wallet?.balance || 0).toLocaleString('fr-FR')
+    document.getElementById('retraitModal').classList.remove('hidden')
+  }
+
+  window.closeRetrait = () =>
+    document.getElementById('retraitModal').classList.add('hidden')
+
+  window.toggleMethode = function() {
+    const method = document.getElementById('retraitMethod').value
+    document.getElementById('mmFields').classList.toggle('hidden', method !== 'mobile_money')
+    document.getElementById('autreFields').classList.toggle('hidden', method === 'mobile_money')
+  }
+
+  window.soumettreRetrait = async function() {
+    const amount = parseInt(document.getElementById('retraitAmount').value)
+    const method = document.getElementById('retraitMethod').value
+    const btn    = document.getElementById('btnRetrait')
+    const msg    = document.getElementById('retraitMsg')
+
+    let numero = ''
+    let reseau = ''
+
+    if (method === 'mobile_money') {
+      numero = document.getElementById('retraitNumero').value.trim()
+      reseau = document.getElementById('retraitReseau').value
+    } else {
+      numero = document.getElementById('retraitAutre').value.trim()
+    }
+
+    if (!amount || amount < 1000 || !numero) {
+      msg.className = 'msg-error'
+      msg.textContent = 'Remplis tous les champs. Minimum 1 000 FCFA.'
+      return
+    }
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+    msg.className = 'hidden'
+
+    const { error } = await demanderRetrait({
+      entityId: currentUser.id,
+      amount, method, numero, reseau
+    })
+
+    btn.disabled = false
+    btn.textContent = 'ENVOYER LA DEMANDE'
+
+    if (error) {
+      msg.className = 'msg-error'
+      msg.textContent = typeof error === 'string' ? error : error.message
+      return
+    }
+
+    wallet.balance -= amount
+    wallet.total_out += amount
+    renderSolde()
+    closeRetrait()
+    await loadHistorique()
+  }
+
+  window.handleLogout = logout
+</script>
+</body>
+</html>

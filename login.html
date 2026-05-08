@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Connexion</title>
+  <link rel="stylesheet" href="/css/aether.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-box">
+
+    <div class="auth-logo">✦ AETHER</div>
+    <div class="auth-tagline">LE RÉSEAU DES ÂMES</div>
+
+    <div class="auth-title">Reprends ta place</div>
+
+    <div class="field">
+      <label>Adresse email</label>
+      <input type="email" id="email" placeholder="ton@ame.com" />
+    </div>
+
+    <div class="field">
+      <label>Mot de passe</label>
+      <input type="password" id="password" placeholder="Mot de passe" />
+    </div>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="handleLogin()">
+      ENTRER DANS L'AETHER
+    </button>
+
+    <div id="msgBox" class="hidden"></div>
+
+    <p class="auth-link" style="margin-top:12px">
+      <a href="#" onclick="handleReset()">Mot de passe oublié ?</a>
+    </p>
+    <p class="auth-link">Pas encore d'âme ? <a href="/signup">Créer un Temple</a></p>
+
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '/lib/supabase.js'
+  import { getEntity } from '/lib/auth.js'
+
+  window.handleLogin = async function() {
+    const email    = document.getElementById('email').value.trim()
+    const password = document.getElementById('password').value
+    const btn      = document.getElementById('submitBtn')
+
+    if (!email || !password) return showMsg('Remplis tous les champs.', 'error')
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      btn.disabled = false
+      btn.textContent = "ENTRER DANS L'AETHER"
+      return showMsg('Email ou mot de passe incorrect.', 'error')
+    }
+
+    // Vérifier si onboarding terminé
+    const entity = await getEntity(data.user.id)
+    if (!entity?.onboarding_completed) {
+      window.location.href = '/onboarding'
+    } else {
+      window.location.href = '/flux'
+    }
+  }
+
+  window.handleReset = async function() {
+    const email = document.getElementById('email').value.trim()
+    if (!email) return showMsg('Entre ton email d\'abord.', 'error')
+    await supabase.auth.resetPasswordForEmail(email)
+    showMsg('✓ Email de réinitialisation envoyé.', 'success')
+  }
+
+  function showMsg(text, type) {
+    const box = document.getElementById('msgBox')
+    box.className = type === 'error' ? 'msg-error' : 'msg-success'
+    box.textContent = text
+  }
+</script>
+</body>
+</html>

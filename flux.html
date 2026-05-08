@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Flux Divin</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"      class="nav-item active">🌊 Flux</a>
+    <a href="/conciles"  class="nav-item">🔮 Conciles</a>
+    <a href="/temple"    class="nav-item" id="navTemple">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<!-- LAYOUT -->
+<div class="page-layout">
+
+  <!-- FEED -->
+  <main class="feed-col">
+
+    <!-- COMPOSER -->
+    <div class="composer" id="composer">
+      <div class="composer-avatar" id="composerAvatar">?</div>
+      <div class="composer-body">
+
+        <textarea
+          id="souffleText"
+          class="composer-input"
+          placeholder="Quel Souffle portes-tu aujourd'hui ?"
+          maxlength="280"
+          oninput="updateCounter()"
+        ></textarea>
+
+        <!-- Type selector -->
+        <div class="type-row">
+          <button class="type-pill active" data-type="simple"     onclick="selectType(this)">💬 Simple</button>
+          <button class="type-pill"        data-type="oracle"     onclick="selectType(this)">🔮 Oracle</button>
+          <button class="type-pill"        data-type="revelation" onclick="selectType(this)">📜 Révélation</button>
+        </div>
+
+        <!-- Emotion selector -->
+        <div class="emotion-row" id="emotionRow">
+          <button class="emo-pill" data-emo="feu"    onclick="selectEmo(this)">🔥 Feu</button>
+          <button class="emo-pill" data-emo="eau"    onclick="selectEmo(this)">💧 Eau</button>
+          <button class="emo-pill active" data-emo="terre"  onclick="selectEmo(this)">🌿 Terre</button>
+          <button class="emo-pill" data-emo="eclair" onclick="selectEmo(this)">⚡ Éclair</button>
+          <button class="emo-pill" data-emo="brume"  onclick="selectEmo(this)">🌫️ Brume</button>
+        </div>
+
+        <div class="composer-footer">
+          <span class="char-count" id="charCount">0 / 280</span>
+          <button class="btn-souffle" id="btnSouffle" onclick="publier()">✦ SOUFFLER</button>
+        </div>
+
+        <div id="composeMsg" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- FEED LIST -->
+    <div id="feedList">
+      <div class="feed-loading">Chargement du Flux Divin...</div>
+    </div>
+
+    <button class="btn-load-more hidden" id="btnMore" onclick="chargerPlus()">
+      Charger plus
+    </button>
+
+  </main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar-col">
+    <div class="sidebar-card" id="myKarma">
+      <div class="sc-title">✦ MON KARMA</div>
+      <div class="karma-num" id="karmaNum">—</div>
+      <div class="karma-label" id="karmaLabel">Chargement...</div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sc-title">📖 LES ÉMOTIONS</div>
+      <div class="emo-legend">
+        <div class="emo-leg-item"><span>🔥</span> Passion · Indignation</div>
+        <div class="emo-leg-item"><span>💧</span> Douceur · Empathie</div>
+        <div class="emo-leg-item"><span>🌿</span> Sagesse · Ancrage</div>
+        <div class="emo-leg-item"><span>⚡</span> Humour · Surprise</div>
+        <div class="emo-leg-item"><span>🌫️</span> Mystère · Doute</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script type="module">
+  import { requireAuth, logout, getEntity } from '/lib/auth.js'
+  import { getFeed, publierSouffle, resonner } from '/lib/souffles.js'
+  import { EMOTIONS, TYPES, timeAgo, avatarInitials } from '/lib/utils.js'
+
+  let currentUser   = null
+  let currentEntity = null
+  let selectedEmo   = 'terre'
+  let selectedType  = 'simple'
+  let page          = 0
+  let loading       = false
+
+  // ── INIT ──
+  currentUser   = await requireAuth()
+  currentEntity = await getEntity(currentUser.id)
+
+  // Avatar composer
+  document.getElementById('composerAvatar').textContent =
+    avatarInitials(currentEntity?.display_name || '')
+
+  // Karma sidebar
+  document.getElementById('karmaNum').textContent =
+    (currentEntity?.karma_score || 0).toLocaleString('fr-FR')
+  document.getElementById('karmaLabel').textContent =
+    niveauLabel(currentEntity?.karma_score || 0)
+
+  // Lien Temple
+  document.getElementById('navTemple').href =
+    `/temple?u=${currentEntity?.username}`
+
+  // Charger feed
+  await chargerFeed()
+
+  // ── COMPOSER ──
+  window.selectType = function(el) {
+    document.querySelectorAll('.type-pill').forEach(p => p.classList.remove('active'))
+    el.classList.add('active')
+    selectedType = el.dataset.type
+  }
+
+  window.selectEmo = function(el) {
+    document.querySelectorAll('.emo-pill').forEach(p => p.classList.remove('active'))
+    el.classList.add('active')
+    selectedEmo = el.dataset.emo
+    // Coloriser la ligne émotion
+    const e = EMOTIONS[selectedEmo]
+    document.getElementById('emotionRow').style.borderColor = e.border
+  }
+
+  window.updateCounter = function() {
+    const len = document.getElementById('souffleText').value.length
+    document.getElementById('charCount').textContent = `${len} / 280`
+    document.getElementById('charCount').style.color = len > 250 ? '#c62828' : ''
+  }
+
+  window.publier = async function() {
+    const content = document.getElementById('souffleText').value.trim()
+    const btn     = document.getElementById('btnSouffle')
+    const msgBox  = document.getElementById('composeMsg')
+
+    if (!content) return
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+    msgBox.className = 'hidden'
+
+    const { data, error } = await publierSouffle({
+      userId:  currentUser.id,
+      content,
+      emotion: selectedEmo,
+      type:    selectedType,
+    })
+
+    btn.disabled = false
+    btn.textContent = '✦ SOUFFLER'
+
+    if (error) {
+      msgBox.className = 'msg-error'
+      msgBox.textContent = typeof error === 'string' ? error : error.message
+      return
+    }
+
+    document.getElementById('souffleText').value = ''
+    document.getElementById('charCount').textContent = '0 / 280'
+
+    // Ajouter en tête de feed
+    const feedList = document.getElementById('feedList')
+    const card = buildCard({ ...data, entities: currentEntity, resonances: [] })
+    feedList.insertAdjacentHTML('afterbegin', card)
+
+    // Update karma
+    currentEntity.karma_score += 10
+    document.getElementById('karmaNum').textContent =
+      currentEntity.karma_score.toLocaleString('fr-FR')
+  }
+
+  // ── FEED ──
+  async function chargerFeed() {
+    if (loading) return
+    loading = true
+    const feedList = document.getElementById('feedList')
+    if (page === 0) feedList.innerHTML = '<div class="feed-loading">Chargement...</div>'
+
+    const { data, error } = await getFeed(page)
+
+    if (error || !data?.length) {
+      if (page === 0) feedList.innerHTML = '<div class="feed-empty">Le Flux est silencieux pour l\'instant.<br>Sois le premier à Souffler.</div>'
+      document.getElementById('btnMore').classList.add('hidden')
+      loading = false
+      return
+    }
+
+    if (page === 0) feedList.innerHTML = ''
+    data.forEach(s => feedList.insertAdjacentHTML('beforeend', buildCard(s)))
+
+    if (data.length === 15) {
+      document.getElementById('btnMore').classList.remove('hidden')
+    } else {
+      document.getElementById('btnMore').classList.add('hidden')
+    }
+    loading = false
+  }
+
+  window.chargerPlus = async function() {
+    page++
+    await chargerFeed()
+  }
+
+  function buildCard(s) {
+    const e       = EMOTIONS[s.emotion]
+    const t       = TYPES[s.type]
+    const entity  = s.entities || {}
+    const resCount = s.resonances?.length || 0
+    const isMine  = s.entity_id === currentUser.id
+    const hasRes  = s.resonances?.some(r => r.entity_id === currentUser.id)
+
+    return `
+    <article class="souffle-card ${s.is_ascending ? 'ascending' : ''}"
+             style="border-left: 3px solid ${e.border}">
+
+      ${s.is_ascending ? '<div class="ascending-banner">✦ Souffle Ascendant</div>' : ''}
+      ${s.type !== 'simple' ? `<div class="type-label">${t.icon} ${t.label}</div>` : ''}
+
+      <div class="card-top">
+        <div class="card-avatar" style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+          ${avatarInitials(entity.display_name || '?')}
+        </div>
+        <div class="card-meta">
+          <span class="card-name">${entity.display_name || 'Anonyme'}</span>
+          <span class="card-handle">@${entity.username || '—'}</span>
+          <span class="wisdom-pill">Sagesse ${entity.wisdom_level || 1}</span>
+        </div>
+        <div class="card-time">${timeAgo(s.created_at)}</div>
+      </div>
+
+      <div class="emotion-tag" style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
+        ${e.icon} Souffle de ${e.label}
+      </div>
+
+      <p class="card-content">${escHtml(s.content)}</p>
+
+      <div class="card-actions">
+        <button
+          class="action-btn ${hasRes ? 'active' : ''}"
+          onclick="handleResonner('${s.id}', this)"
+          data-souffle="${s.id}"
+        >
+          ✨ <span class="res-count">${resCount}</span>
+        </button>
+        <button class="action-btn">🌊 Écho</button>
+        ${isMine ? `<button class="action-btn danger" onclick="voilerSouffle('${s.id}', this)">👁️ Voiler</button>` : ''}
+      </div>
+    </article>`
+  }
+
+  window.handleResonner = async function(souffleId, btn) {
+    const { action } = await resonner(currentUser.id, souffleId, selectedEmo)
+    const countEl = btn.querySelector('.res-count')
+    const count   = parseInt(countEl.textContent)
+    if (action === 'added') {
+      countEl.textContent = count + 1
+      btn.classList.add('active')
+    } else {
+      countEl.textContent = Math.max(0, count - 1)
+      btn.classList.remove('active')
+    }
+  }
+
+  window.voilerSouffle = async function(souffleId, btn) {
+    if (!confirm('Voiler ce Souffle ? Il ne sera plus visible publiquement.')) return
+    const { error } = await supabase
+      .from('souffles')
+      .update({ is_veiled: true })
+      .eq('id', souffleId)
+    if (!error) btn.closest('.souffle-card').remove()
+  }
+
+  window.handleLogout = logout
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  function niveauLabel(k) {
+    if (k >= 10000) return '✦ Divin'
+    if (k >= 5000)  return '⚡ Sage'
+    if (k >= 2000)  return '🔮 Gardien'
+    if (k >= 500)   return '🌿 Initié'
+    return '🌫️ Novice'
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Concile</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/conciles.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"     class="nav-item">🌊 Flux</a>
+    <a href="/conciles" class="nav-item active">🔮 Conciles</a>
+    <a href="/temple"   class="nav-item">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="concile-page-wrap">
+  <main class="concile-page-main">
+
+    <!-- BANNER CONCILE -->
+    <div class="concile-banner" id="concileBanner">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="temple-tabs" id="concileTabs" style="display:none">
+      <button class="tab-btn active" onclick="switchTab('feed', this)">💨 Souffles</button>
+      <button class="tab-btn"        onclick="switchTab('membres', this)">👥 Membres</button>
+      <button class="tab-btn hidden" id="tabGardien" onclick="switchTab('gardien', this)">⚙️ Gardien</button>
+    </div>
+
+    <div class="tab-content active" id="tab-feed">
+      <!-- Composer Concile -->
+      <div class="composer hidden" id="concileComposer">
+        <div class="composer-avatar" id="composerAvatar">?</div>
+        <div class="composer-body">
+          <textarea id="souffleText" class="composer-input"
+            placeholder="Souffle dans ce Concile..." maxlength="280"
+            oninput="updateCounter()"></textarea>
+          <div class="emotion-row">
+            <button class="emo-pill" data-emo="feu"    onclick="selectEmo(this)">🔥</button>
+            <button class="emo-pill" data-emo="eau"    onclick="selectEmo(this)">💧</button>
+            <button class="emo-pill active" data-emo="terre" onclick="selectEmo(this)">🌿</button>
+            <button class="emo-pill" data-emo="eclair" onclick="selectEmo(this)">⚡</button>
+            <button class="emo-pill" data-emo="brume"  onclick="selectEmo(this)">🌫️</button>
+          </div>
+          <div class="composer-footer">
+            <span class="char-count" id="charCount">0 / 280</span>
+            <button class="btn-souffle" id="btnSouffle" onclick="publierDansConcile()">✦ SOUFFLER</button>
+          </div>
+          <div id="composeMsg" class="hidden"></div>
+        </div>
+      </div>
+      <!-- Feed -->
+      <div id="concileFeed"><div class="feed-loading">Chargement...</div></div>
+    </div>
+
+    <div class="tab-content" id="tab-membres">
+      <div class="sidebar-card" style="margin-top:0">
+        <div id="membresList"><div class="feed-loading">Chargement...</div></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-gardien">
+      <div class="sidebar-card" style="margin-top:0">
+        <div class="sc-title">⏳ DEMANDES EN ATTENTE</div>
+        <div id="pendingList"><div class="feed-loading">Chargement...</div></div>
+      </div>
+    </div>
+
+  </main>
+
+  <aside class="concile-page-sidebar">
+    <div class="sidebar-card" id="sidebarInfo">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+  </aside>
+</div>
+
+<script type="module">
+  import { requireAuth, logout, getEntity } from '/lib/auth.js'
+  import { getConcile, getConcileFeed, getMembers,
+           getPendingMembers, getMembership,
+           validerMembre, exclureMembre, quitter } from '/lib/conciles.js'
+  import { publierSouffle }               from '/lib/souffles.js'
+  import { EMOTIONS, timeAgo, avatarInitials } from '/lib/utils.js'
+  import { supabase }                     from '/lib/supabase.js'
+
+  let currentUser   = null
+  let currentEntity = null
+  let concile       = null
+  let membership    = null
+  let isGardien     = false
+  let isMembre      = false
+  let selectedEmo   = 'terre'
+
+  currentUser   = await requireAuth()
+  currentEntity = await getEntity(currentUser.id)
+
+  const params     = new URLSearchParams(window.location.search)
+  const concileId  = params.get('id')
+  if (!concileId) { window.location.href = '/conciles'; return }
+
+  concile    = await getConcile(concileId)
+  membership = await getMembership(concileId, currentUser.id)
+  isGardien  = concile?.guardian_id === currentUser.id
+  isMembre   = membership?.status === 'approved'
+
+  if (!concile) {
+    document.querySelector('.concile-page-wrap').innerHTML =
+      '<div class="feed-empty">Concile introuvable.</div>'
+    return
+  }
+
+  renderBanner()
+  renderSidebar()
+  document.getElementById('concileTabs').style.display = 'flex'
+  if (isGardien) document.getElementById('tabGardien').classList.remove('hidden')
+  if (isMembre) {
+    document.getElementById('concileComposer').classList.remove('hidden')
+    document.getElementById('composerAvatar').textContent =
+      avatarInitials(currentEntity?.display_name || '')
+  }
+  await loadFeed()
+
+  // ── BANNER ──
+  function renderBanner() {
+    const e = EMOTIONS[concile.emotion] || EMOTIONS.terre
+    const guardian = concile.entities || {}
+    const typeLabel = { ouvert:'Ouvert', initiatique:'Initiatique', sacre:'Sacré' }
+    const typeColor = { ouvert:'var(--success)', initiatique:'var(--gold)', sacre:'var(--accent)' }
+
+    document.getElementById('concileBanner').innerHTML = `
+    <div class="concile-banner-top">
+      <div class="concile-big-icon" style="background:${e.bg};border:2px solid ${e.border}">
+        ${e.icon}
+      </div>
+      <div class="concile-banner-info">
+        <div class="concile-banner-name">${escHtml(concile.name)}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <span class="concile-type-badge"
+            style="background:${typeColor[concile.type]}18;color:${typeColor[concile.type]};border:1px solid ${typeColor[concile.type]}33">
+            ${typeLabel[concile.type]}
+          </span>
+          <span style="font-size:11px;color:var(--text3)">
+            Gardien : @${guardian.username || '—'}
+          </span>
+        </div>
+        <div class="concile-banner-intention">${escHtml(concile.description || concile.intention || '')}</div>
+        <div class="concile-banner-actions">
+          ${isMembre && !isGardien ? `
+            <button class="btn-edit-temple" onclick="quitterConcile()">Quitter</button>` : ''}
+          ${!isMembre && membership?.status === 'pending' ? `
+            <span style="font-size:12px;color:var(--gold);padding:7px 14px;background:rgba(184,134,11,0.08);border-radius:20px;border:1px solid rgba(184,134,11,0.2)">
+              ⏳ Demande en attente
+            </span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="concile-stats-row">
+      <div class="concile-stat">
+        <span class="stat-num">${concile.member_count || 1}</span>
+        <div class="stat-label">Âmes</div>
+      </div>
+      <div class="concile-stat">
+        <span class="stat-num" id="soufflesCount">—</span>
+        <div class="stat-label">Souffles</div>
+      </div>
+      <div class="concile-stat">
+        <span class="stat-num">${e.icon}</span>
+        <div class="stat-label">${e.label}</div>
+      </div>
+    </div>`
+
+    // Count souffles
+    supabase.from('souffles').select('id', { count: 'exact', head: true })
+      .eq('concile_id', concileId).eq('is_veiled', false)
+      .then(({ count }) => {
+        const el = document.getElementById('soufflesCount')
+        if (el) el.textContent = count || 0
+      })
+  }
+
+  // ── SIDEBAR ──
+  function renderSidebar() {
+    const e = EMOTIONS[concile.emotion] || EMOTIONS.terre
+    document.getElementById('sidebarInfo').innerHTML = `
+    <div class="sc-title">🔮 À PROPOS</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px">
+      ${escHtml(concile.description || concile.intention || 'Aucune description.')}
+    </div>
+    <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px">
+      Créé le ${new Date(concile.created_at).toLocaleDateString('fr-FR')}
+    </div>`
+  }
+
+  // ── FEED ──
+  async function loadFeed() {
+    const list = document.getElementById('concileFeed')
+    const data = await getConcileFeed(concileId)
+    if (!data.length) {
+      list.innerHTML = `<div class="feed-empty">
+        <div style="font-size:32px;margin-bottom:12px">💨</div>
+        ${isMembre ? 'Sois le premier à Souffler dans ce Concile.' : 'Ce Concile est silencieux.'}
+      </div>`
+      return
+    }
+    list.innerHTML = data.map(s => buildCard(s)).join('')
+  }
+
+  // ── MEMBRES ──
+  window.switchTab = async function(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+    btn.classList.add('active')
+    document.getElementById(`tab-${tab}`).classList.add('active')
+    if (tab === 'membres') await loadMembres()
+    if (tab === 'gardien') await loadPending()
+  }
+
+  async function loadMembres() {
+    const membres = await getMembers(concileId)
+    const el = document.getElementById('membresList')
+    if (!membres.length) { el.innerHTML = '<div class="feed-empty">Aucun membre.</div>'; return }
+    el.innerHTML = membres.map(m => {
+      const e = EMOTIONS[m.entities?.aura_color] || EMOTIONS.terre
+      return `
+      <div class="member-item" onclick="window.location.href='/temple?u=${m.entities?.username}'">
+        <div class="member-avatar" style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
+          ${avatarInitials(m.entities?.display_name || '?')}
+        </div>
+        <div>
+          <div class="member-name">${escHtml(m.entities?.display_name || '—')}</div>
+          <div class="member-handle">@${m.entities?.username || '—'}</div>
+        </div>
+        ${m.entity_id === concile.guardian_id ? '<span class="guardian-crown" title="Gardien">👑</span>' : ''}
+        ${isGardien && m.entity_id !== currentUser.id ? `
+          <button class="action-btn danger"
+            style="margin-left:auto;font-size:11px;padding:4px 10px"
+            onclick="event.stopPropagation();exclure('${m.id}')">
+            Exclure
+          </button>` : ''}
+      </div>`
+    }).join('')
+  }
+
+  async function loadPending() {
+    const pending = await getPendingMembers(concileId)
+    const el = document.getElementById('pendingList')
+    if (!pending.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:20px 0">Aucune demande en attente.</div>'
+      return
+    }
+    el.innerHTML = pending.map(m => `
+    <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:13px;margin-bottom:4px">
+        ${escHtml(m.entities?.display_name || '—')}
+        <span style="font-size:11px;color:var(--text3);font-weight:400">
+          @${m.entities?.username || '—'}
+        </span>
+      </div>
+      ${m.intention_answer ? `
+        <div style="font-size:12px;color:var(--text2);background:var(--bg);padding:8px 12px;border-radius:10px;margin:8px 0;line-height:1.5">
+          "${escHtml(m.intention_answer)}"
+        </div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-lien" style="padding:6px 16px;font-size:11px"
+          onclick="valider('${m.id}', this)">✓ Accepter</button>
+        <button class="btn-edit-temple" style="padding:6px 16px;font-size:11px;color:var(--error);border-color:#ffcdd2"
+          onclick="refuser('${m.id}', this)">✗ Refuser</button>
+      </div>
+    </div>`).join('')
+  }
+
+  window.valider = async function(memberId, btn) {
+    btn.disabled = true
+    await validerMembre(memberId, concileId)
+    btn.closest('div[style]').remove()
+    await chargerConcileCount()
+  }
+
+  window.refuser = async function(memberId, btn) {
+    btn.disabled = true
+    await exclureMembre(memberId)
+    btn.closest('div[style]').remove()
+  }
+
+  window.exclure = async function(memberId) {
+    if (!confirm('Exclure ce membre ?')) return
+    await exclureMembre(memberId)
+    await loadMembres()
+  }
+
+  window.quitterConcile = async function() {
+    if (!confirm('Quitter ce Concile ?')) return
+    await quitter(concileId, currentUser.id)
+    window.location.href = '/conciles'
+  }
+
+  // ── COMPOSER ──
+  window.selectEmo = function(el) {
+    document.querySelectorAll('.emo-pill').forEach(p => p.classList.remove('active'))
+    el.classList.add('active')
+    selectedEmo = el.dataset.emo
+  }
+
+  window.updateCounter = function() {
+    const len = document.getElementById('souffleText').value.length
+    document.getElementById('charCount').textContent = `${len} / 280`
+  }
+
+  window.publierDansConcile = async function() {
+    const content = document.getElementById('souffleText').value.trim()
+    const btn     = document.getElementById('btnSouffle')
+    const msg     = document.getElementById('composeMsg')
+    if (!content) return
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+
+    const { data, error } = await publierSouffle({
+      userId: currentUser.id, content, emotion: selectedEmo, type: 'simple'
+    })
+
+    if (!error) {
+      // Associer au Concile
+      await supabase.from('souffles')
+        .update({ concile_id: concileId })
+        .eq('id', data.id)
+
+      document.getElementById('souffleText').value = ''
+      document.getElementById('charCount').textContent = '0 / 280'
+      await loadFeed()
+    } else {
+      msg.className = 'msg-error'
+      msg.textContent = typeof error === 'string' ? error : error.message
+    }
+
+    btn.disabled = false
+    btn.textContent = '✦ SOUFFLER'
+  }
+
+  function buildCard(s) {
+    const e = EMOTIONS[s.emotion] || EMOTIONS.terre
+    const entity = s.entities || {}
+    const resCount = s.resonances?.length || 0
+
+    return `
+    <article class="souffle-card" style="border-left:3px solid ${e.border}">
+      <div class="card-top">
+        <div class="card-avatar" style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+          ${avatarInitials(entity.display_name || '?')}
+        </div>
+        <div class="card-meta">
+          <span class="card-name" style="cursor:pointer" onclick="window.location.href='/temple?u=${entity.username}'">
+            ${escHtml(entity.display_name || 'Anonyme')}
+          </span>
+          <span class="wisdom-pill">Sagesse ${entity.wisdom_level || 1}</span>
+        </div>
+        <div class="card-time">${timeAgo(s.created_at)}</div>
+      </div>
+      <div class="emotion-tag" style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
+        ${e.icon} ${e.label}
+      </div>
+      <p class="card-content">${escHtml(s.content)}</p>
+      <div class="card-actions">
+        <button class="action-btn">✨ <span>${resCount}</span></button>
+        <button class="action-btn">🌊 Écho</button>
+      </div>
+    </article>`
+  }
+
+  async function chargerConcileCount() {
+    const { count } = await supabase
+      .from('concile_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('concile_id', concileId)
+      .eq('status', 'approved')
+    await supabase.from('conciles').update({ member_count: count }).eq('id', concileId)
+  }
+
+  window.handleLogout = logout
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+</script>
+</body>
+</html>

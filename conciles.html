@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Conciles</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/conciles.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"     class="nav-item">🌊 Flux</a>
+    <a href="/conciles" class="nav-item active">🔮 Conciles</a>
+    <a href="/temple"   class="nav-item">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="conciles-wrap">
+  <main class="conciles-main">
+
+    <div class="conciles-header">
+      <div class="conciles-title">🔮 CONCILES</div>
+      <button class="btn-create-concile" onclick="openCreate()">✦ Créer</button>
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-pill active" data-filter="tous"       onclick="filterConciles(this)">Tous</button>
+      <button class="filter-pill"        data-filter="ouvert"     onclick="filterConciles(this)">Ouverts</button>
+      <button class="filter-pill"        data-filter="initiatique" onclick="filterConciles(this)">Initiatiques</button>
+      <button class="filter-pill"        data-filter="mes"        onclick="filterConciles(this)">Mes Conciles</button>
+    </div>
+
+    <div id="concilesList">
+      <div class="feed-loading">Chargement des Conciles...</div>
+    </div>
+
+  </main>
+
+  <aside class="conciles-sidebar">
+    <div class="sidebar-card">
+      <div class="sc-title">✦ MES CONCILES</div>
+      <div id="mesConciles">
+        <div style="font-size:13px;color:var(--text3);text-align:center;padding:20px 0">
+          Aucun Concile rejoint.
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sc-title">📖 LES TYPES</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:12px;color:var(--text2)">
+          <strong style="color:var(--success)">Ouvert</strong><br>
+          Accès libre pour tous
+        </div>
+        <div style="font-size:12px;color:var(--text2)">
+          <strong style="color:var(--gold)">Initiatique</strong><br>
+          Répondre à une question
+        </div>
+        <div style="font-size:12px;color:var(--text2)">
+          <strong style="color:var(--accent)">Sacré</strong><br>
+          Sur invitation uniquement
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- MODAL CRÉER CONCILE -->
+<div class="modal-overlay hidden" id="createModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>✦ NOUVEAU CONCILE</span>
+      <button class="modal-close" onclick="closeCreate()">×</button>
+    </div>
+
+    <div class="field">
+      <label>Nom du Concile</label>
+      <input type="text" id="cName" placeholder="Ex: Bâtisseurs d'Afrique" maxlength="60" />
+    </div>
+
+    <div class="field">
+      <label>Intention (description)</label>
+      <textarea id="cDesc" placeholder="De quoi parle ce Concile ?" maxlength="200"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Émotion dominante</label>
+      <div class="aura-grid" style="margin-bottom:0">
+        <div class="aura-option selected" data-emo="terre" onclick="selectCEmo(this)"><span class="aura-icon">🌿</span><span class="aura-label">TERRE</span></div>
+        <div class="aura-option" data-emo="feu"    onclick="selectCEmo(this)"><span class="aura-icon">🔥</span><span class="aura-label">FEU</span></div>
+        <div class="aura-option" data-emo="eau"    onclick="selectCEmo(this)"><span class="aura-icon">💧</span><span class="aura-label">EAU</span></div>
+        <div class="aura-option" data-emo="eclair" onclick="selectCEmo(this)"><span class="aura-icon">⚡</span><span class="aura-label">ÉCLAIR</span></div>
+        <div class="aura-option" data-emo="brume"  onclick="selectCEmo(this)"><span class="aura-icon">🌫️</span><span class="aura-label">BRUME</span></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Type d'accès</label>
+      <select id="cType" onchange="toggleQuestion()">
+        <option value="ouvert">Ouvert — accès libre</option>
+        <option value="initiatique">Initiatique — question d'entrée</option>
+      </select>
+    </div>
+
+    <div class="field hidden" id="questionField">
+      <label>Question d'entrée</label>
+      <input type="text" id="cQuestion" placeholder="Ex: Pourquoi veux-tu rejoindre ?" maxlength="200" />
+    </div>
+
+    <button class="btn btn-primary" id="createBtn" onclick="creerConcile()">
+      ✦ CRÉER LE CONCILE
+    </button>
+    <div id="createMsg" class="hidden" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- MODAL REJOINDRE INITIATIQUE -->
+<div class="modal-overlay hidden" id="joinModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>🔮 REJOINDRE LE CONCILE</span>
+      <button class="modal-close" onclick="closeJoin()">×</button>
+    </div>
+    <div class="join-question" id="joinQuestion"></div>
+    <div class="field">
+      <label>Ta réponse</label>
+      <textarea id="joinAnswer" placeholder="Réponds sincèrement..." maxlength="300"></textarea>
+    </div>
+    <button class="btn btn-primary" id="joinBtn" onclick="submitJoin()">
+      ENVOYER MA DEMANDE
+    </button>
+    <div id="joinMsg" class="hidden" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logout }       from '/lib/auth.js'
+  import { getConciles, rejoindre,
+           getMembership, quitter }    from '/lib/conciles.js'
+  import { EMOTIONS, avatarInitials }  from '/lib/utils.js'
+  import { supabase }                  from '/lib/supabase.js'
+
+  let currentUser   = null
+  let allConciles   = []
+  let mesConciles   = []
+  let currentFilter = 'tous'
+  let cEmo          = 'terre'
+  let joinTarget    = null
+
+  currentUser = await requireAuth()
+
+  await chargerConciles()
+
+  // ── CHARGEMENT ──
+  async function chargerConciles() {
+    allConciles = await getConciles(50)
+
+    const { data: mes } = await supabase
+      .from('concile_members')
+      .select('concile_id, conciles(id, name, emotion, type, member_count)')
+      .eq('entity_id', currentUser.id)
+      .eq('status', 'approved')
+
+    mesConciles = mes?.map(m => m.conciles).filter(Boolean) || []
+
+    renderConcilesList(allConciles)
+    renderMesConciles()
+  }
+
+  function renderConcilesList(list) {
+    const el = document.getElementById('concilesList')
+    if (!list.length) {
+      el.innerHTML = '<div class="feed-empty">Aucun Concile trouvé.</div>'
+      return
+    }
+    el.innerHTML = list.map(c => buildConcileCard(c)).join('')
+  }
+
+  function buildConcileCard(c) {
+    const e       = EMOTIONS[c.emotion] || EMOTIONS.terre
+    const isMembre = mesConciles.some(m => m.id === c.id)
+    const typeLabel = { ouvert: 'Ouvert', initiatique: 'Initiatique', sacre: 'Sacré' }
+    const typeColor = { ouvert: 'var(--success)', initiatique: 'var(--gold)', sacre: 'var(--accent)' }
+
+    return `
+    <div class="concile-card" onclick="ouvrirConcile('${c.id}')">
+      <div class="concile-icon-wrap" style="background:${e.bg};border:1.5px solid ${e.border}">
+        ${e.icon}
+      </div>
+      <div class="concile-body">
+        <div class="concile-name">${escHtml(c.name)}</div>
+        <div class="concile-desc">${escHtml(c.description || c.intention || '')}</div>
+        <div class="concile-meta">
+          <span class="concile-type-badge"
+            style="background:${typeColor[c.type]}18;color:${typeColor[c.type]};border:1px solid ${typeColor[c.type]}33">
+            ${typeLabel[c.type]}
+          </span>
+          <span class="concile-members-count">
+            👥 ${(c.member_count || 1).toLocaleString('fr-FR')} âmes
+          </span>
+        </div>
+      </div>
+      ${!isMembre ? `
+        <button class="concile-join-btn"
+          style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}"
+          onclick="event.stopPropagation(); handleJoin('${c.id}','${c.type}','${escHtml(c.access_question||'')}')">
+          Rejoindre
+        </button>` : `
+        <button class="concile-join-btn"
+          style="background:rgba(91,78,203,0.08);color:var(--accent);border:1px solid rgba(91,78,203,0.3)"
+          onclick="event.stopPropagation()">
+          ✓ Membre
+        </button>`}
+    </div>`
+  }
+
+  function renderMesConciles() {
+    const el = document.getElementById('mesConciles')
+    if (!mesConciles.length) return
+    el.innerHTML = mesConciles.map(c => {
+      const e = EMOTIONS[c.emotion] || EMOTIONS.terre
+      return `
+      <div class="member-item" onclick="ouvrirConcile('${c.id}')">
+        <div class="member-avatar" style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
+          ${e.icon}
+        </div>
+        <div>
+          <div class="member-name">${escHtml(c.name)}</div>
+          <div class="member-handle">${(c.member_count||1)} âmes</div>
+        </div>
+      </div>`
+    }).join('')
+  }
+
+  // ── FILTRES ──
+  window.filterConciles = function(btn) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'))
+    btn.classList.add('active')
+    currentFilter = btn.dataset.filter
+    if (currentFilter === 'mes') {
+      renderConcilesList(mesConciles)
+    } else if (currentFilter === 'tous') {
+      renderConcilesList(allConciles)
+    } else {
+      renderConcilesList(allConciles.filter(c => c.type === currentFilter))
+    }
+  }
+
+  // ── REJOINDRE ──
+  window.handleJoin = async function(concileId, type, question) {
+    if (type === 'ouvert') {
+      const { error } = await rejoindre(concileId, currentUser.id, 'ouvert')
+      if (!error) {
+        await chargerConciles()
+        window.location.href = `/concile?id=${concileId}`
+      }
+    } else {
+      joinTarget = { concileId, type }
+      document.getElementById('joinQuestion').textContent = question || 'Pourquoi veux-tu rejoindre ce Concile ?'
+      document.getElementById('joinModal').classList.remove('hidden')
+    }
+  }
+
+  window.submitJoin = async function() {
+    const answer = document.getElementById('joinAnswer').value.trim()
+    const btn    = document.getElementById('joinBtn')
+    const msg    = document.getElementById('joinMsg')
+    if (!answer) return
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+    const { error } = await rejoindre(joinTarget.concileId, currentUser.id, joinTarget.type, answer)
+    btn.disabled = false
+    btn.textContent = 'ENVOYER MA DEMANDE'
+    if (error) {
+      msg.className = 'msg-error'
+      msg.textContent = error.message
+      return
+    }
+    msg.className = 'msg-success'
+    msg.textContent = '✓ Demande envoyée. Le Gardien te répondra bientôt.'
+    setTimeout(closeJoin, 2000)
+  }
+
+  window.closeJoin = () => document.getElementById('joinModal').classList.add('hidden')
+
+  // ── CRÉER ──
+  window.openCreate  = () => document.getElementById('createModal').classList.remove('hidden')
+  window.closeCreate = () => document.getElementById('createModal').classList.add('hidden')
+
+  window.selectCEmo = function(el) {
+    document.querySelectorAll('#createModal .aura-option').forEach(o => o.classList.remove('selected'))
+    el.classList.add('selected')
+    cEmo = el.dataset.emo
+  }
+
+  window.toggleQuestion = function() {
+    const type = document.getElementById('cType').value
+    document.getElementById('questionField').classList.toggle('hidden', type !== 'initiatique')
+  }
+
+  window.creerConcile = async function() {
+    const name  = document.getElementById('cName').value.trim()
+    const desc  = document.getElementById('cDesc').value.trim()
+    const type  = document.getElementById('cType').value
+    const quest = document.getElementById('cQuestion').value.trim()
+    const btn   = document.getElementById('createBtn')
+    const msg   = document.getElementById('createMsg')
+
+    if (!name || !desc) return
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+    msg.className = 'hidden'
+
+    const { data, error } = await supabase
+      .from('conciles')
+      .insert({
+        name, description: desc,
+        type, emotion: cEmo,
+        guardian_id: currentUser.id,
+        access_question: quest || null
+      })
+      .select().single()
+
+    if (error) {
+      btn.disabled = false
+      btn.textContent = '✦ CRÉER LE CONCILE'
+      msg.className = 'msg-error'
+      msg.textContent = error.message
+      return
+    }
+
+    // Gardien devient membre automatiquement
+    await supabase.from('concile_members').insert({
+      concile_id: data.id,
+      entity_id: currentUser.id,
+      role: 'guardian',
+      status: 'approved'
+    })
+
+    window.location.href = `/concile?id=${data.id}`
+  }
+
+  window.ouvrirConcile = (id) => window.location.href = `/concile?id=${id}`
+  window.handleLogout  = logout
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+</script>
+</body>
+</html>

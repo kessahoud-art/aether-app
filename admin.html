@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Admin</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+<!-- NAVBAR ADMIN -->
+<nav class="navbar">
+  <a href="/admin" class="nav-logo">✦ AETHER ADMIN</a>
+  <div class="nav-links">
+    <button class="nav-item active" id="navOffrandes" onclick="showSection('offrandes', this)">
+      💎 Offrandes
+      <span class="notif-badge" id="badgeOffrandes">0</span>
+    </button>
+    <button class="nav-item" id="navRetraits" onclick="showSection('retraits', this)">
+      💸 Retraits
+      <span class="notif-badge" id="badgeRetraits">0</span>
+    </button>
+    <button class="nav-item" id="navStats"    onclick="showSection('stats', this)">📊 Stats</button>
+    <button class="nav-item" id="navUsers"    onclick="showSection('users', this)">👥 Utilisateurs</button>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="admin-wrap">
+
+  <!-- ── OFFRANDES ── -->
+  <section class="admin-section active" id="section-offrandes">
+    <div class="admin-section-header">
+      <div class="admin-title">💎 OFFRANDES EN ATTENTE</div>
+      <button class="btn-refresh" onclick="loadOffrandes()">↺ Rafraîchir</button>
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-pill active" data-status="awaiting_confirmation" onclick="filterOffr(this)">🔍 À confirmer</button>
+      <button class="filter-pill" data-status="completed" onclick="filterOffr(this)">✓ Confirmées</button>
+      <button class="filter-pill" data-status="pending"   onclick="filterOffr(this)">⏳ En attente</button>
+      <button class="filter-pill" data-status="failed"    onclick="filterOffr(this)">✗ Échouées</button>
+      <button class="filter-pill" data-status="all"       onclick="filterOffr(this)">Toutes</button>
+    </div>
+
+    <div id="offrandes-list">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+  </section>
+
+  <!-- ── RETRAITS ── -->
+  <section class="admin-section" id="section-retraits">
+    <div class="admin-section-header">
+      <div class="admin-title">💸 RETRAITS EN ATTENTE</div>
+      <button class="btn-refresh" onclick="loadRetraits()">↺ Rafraîchir</button>
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-pill active" data-status="pending"   onclick="filterRetr(this)">⏳ En attente</button>
+      <button class="filter-pill" data-status="processing" onclick="filterRetr(this)">⚙️ En cours</button>
+      <button class="filter-pill" data-status="completed"  onclick="filterRetr(this)">✓ Effectués</button>
+      <button class="filter-pill" data-status="all"        onclick="filterRetr(this)">Tous</button>
+    </div>
+
+    <div id="retraits-list">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+  </section>
+
+  <!-- ── STATS ── -->
+  <section class="admin-section" id="section-stats">
+    <div class="admin-title" style="margin-bottom:20px">📊 TABLEAU DE BORD</div>
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+
+    <div style="margin-top:24px">
+      <div class="admin-title" style="margin-bottom:16px">📋 DERNIÈRES TRANSACTIONS</div>
+      <div id="recentTransactions">
+        <div class="feed-loading">Chargement...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── UTILISATEURS ── -->
+  <section class="admin-section" id="section-users">
+    <div class="admin-section-header">
+      <div class="admin-title">👥 UTILISATEURS</div>
+      <input class="search-input" id="searchUsers"
+        placeholder="Rechercher par nom ou @username..."
+        oninput="searchUser(this.value)" />
+    </div>
+    <div id="users-list">
+      <div class="feed-loading">Chargement...</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- MODAL CONFIRMATION -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-title">
+      <span id="confirmTitle">Confirmer</span>
+      <button class="modal-close" onclick="closeConfirm()">×</button>
+    </div>
+    <div id="confirmBody" style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:24px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" id="confirmOk" onclick="executeConfirm()">CONFIRMER</button>
+      <button class="btn btn-outline" onclick="closeConfirm()">Annuler</button>
+    </div>
+    <div id="confirmMsg" class="hidden" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth, logout, getEntity } from '/lib/auth.js'
+  import { supabase } from '/lib/supabase.js'
+
+  let currentUser   = null
+  let currentEntity = null
+  let allOffrandes  = []
+  let allRetraits   = []
+  let allUsers      = []
+  let confirmAction = null
+
+  // ── INIT + vérif admin ──
+  currentUser   = await requireAuth()
+  currentEntity = await getEntity(currentUser.id)
+
+  if (!currentEntity?.is_admin) {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Sora',sans-serif">
+        <div style="text-align:center;color:#c62828">
+          <div style="font-size:48px;margin-bottom:16px">🚫</div>
+          <div style="font-size:18px;font-weight:600">Accès refusé</div>
+          <div style="font-size:13px;color:#9a9088;margin-top:8px">
+            Tu n'as pas les droits admin.
+          </div>
+          <a href="/flux" style="display:inline-block;margin-top:20px;color:#5b4ecb">
+            ← Retour au Flux
+          </a>
+        </div>
+      </div>`
+    return
+  }
+
+  await loadOffrandes()
+  await loadBadges()
+
+  // ── NAVIGATION ──
+  window.showSection = async function(name, btn) {
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'))
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'))
+    document.getElementById(`section-${name}`).classList.add('active')
+    btn.classList.add('active')
+
+    if (name === 'offrandes')   await loadOffrandes()
+    if (name === 'retraits')    await loadRetraits()
+    if (name === 'stats')       await loadStats()
+    if (name === 'users')       await loadUsers()
+  }
+
+  // ── BADGES ──
+  async function loadBadges() {
+    const { count: cOff } = await supabase
+      .from('offrandes')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'awaiting_confirmation')
+
+    const { count: cRet } = await supabase
+      .from('retraits')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+
+    document.getElementById('badgeOffrandes').textContent = cOff || 0
+    document.getElementById('badgeRetraits').textContent  = cRet || 0
+
+    document.getElementById('badgeOffrandes').style.display = cOff ? 'inline' : 'none'
+    document.getElementById('badgeRetraits').style.display  = cRet ? 'inline' : 'none'
+  }
+
+  // ── OFFRANDES ──
+  window.loadOffrandes = async function() {
+    const list = document.getElementById('offrandes-list')
+    list.innerHTML = '<div class="feed-loading">Chargement...</div>'
+
+    const { data } = await supabase
+      .from('offrandes')
+      .select(`
+        *,
+        from_entity:from_entity_id(display_name, username),
+        to_entity:to_entity_id(display_name, username)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    allOffrandes = data || []
+    renderOffrandes(allOffrandes.filter(o => o.status === 'awaiting_confirmation'))
+    await loadBadges()
+  }
+
+  function renderOffrandes(list) {
+    const el = document.getElementById('offrandes-list')
+    if (!list.length) {
+      el.innerHTML = '<div class="feed-empty">Aucune offrande.</div>'
+      return
+    }
+
+    const statusStyle = {
+      pending:                { label:'⏳ En attente',    color:'var(--text3)' },
+      awaiting_confirmation:  { label:'🔍 À confirmer',  color:'var(--gold)'  },
+      completed:              { label:'✓ Confirmée',      color:'var(--success)' },
+      failed:                 { label:'✗ Échouée',        color:'var(--error)' },
+    }
+
+    el.innerHTML = list.map(o => {
+      const ss = statusStyle[o.status] || statusStyle.pending
+      return `
+      <div class="admin-card" id="offr-${o.id}">
+        <div class="admin-card-header">
+          <div>
+            <div class="admin-card-title">
+              💎 ${o.amount.toLocaleString('fr-FR')} FCFA
+              <span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:8px">
+                → créateur reçoit ${o.net_amount.toLocaleString('fr-FR')} FCFA
+              </span>
+            </div>
+            <div class="admin-card-meta">
+              De @${o.from_entity?.username || '—'}
+              → À @${o.to_entity?.username || '—'}
+            </div>
+            ${o.message ? `<div class="admin-card-msg">"${escHtml(o.message)}"</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;font-weight:600;color:${ss.color}">${ss.label}</div>
+            <div class="admin-card-date">${new Date(o.created_at).toLocaleString('fr-FR')}</div>
+            <code class="ref-code">${o.reference}</code>
+          </div>
+        </div>
+
+        ${o.status === 'awaiting_confirmation' ? `
+        <div class="admin-card-actions">
+          <button class="btn-confirm" onclick="askConfirm('offr_confirm','${o.id}',
+            'Confirmer le paiement de ${o.amount.toLocaleString('fr-FR')} FCFA ?<br><br>Le wallet de @${o.to_entity?.username} sera crédité de ${o.net_amount.toLocaleString('fr-FR')} FCFA.')">
+            ✓ CONFIRMER LE PAIEMENT
+          </button>
+          <button class="btn-reject" onclick="askConfirm('offr_reject','${o.id}',
+            'Rejeter cette offrande ? Elle passera en statut échoué.')">
+            ✗ REJETER
+          </button>
+        </div>` : ''}
+      </div>`
+    }).join('')
+  }
+
+  window.filterOffr = function(btn) {
+    document.querySelectorAll('#section-offrandes .filter-pill')
+      .forEach(p => p.classList.remove('active'))
+    btn.classList.add('active')
+    const status = btn.dataset.status
+    const filtered = status === 'all'
+      ? allOffrandes
+      : allOffrandes.filter(o => o.status === status)
+    renderOffrandes(filtered)
+  }
+
+  // ── RETRAITS ──
+  window.loadRetraits = async function() {
+    const list = document.getElementById('retraits-list')
+    list.innerHTML = '<div class="feed-loading">Chargement...</div>'
+
+    const { data } = await supabase
+      .from('retraits')
+      .select('*, entities(display_name, username)')
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    allRetraits = data || []
+    renderRetraits(allRetraits.filter(r => r.status === 'pending'))
+    await loadBadges()
+  }
+
+  function renderRetraits(list) {
+    const el = document.getElementById('retraits-list')
+    if (!list.length) {
+      el.innerHTML = '<div class="feed-empty">Aucun retrait.</div>'
+      return
+    }
+
+    const methodLabel = {
+      mobile_money: '📱 Mobile Money',
+      carte:        '💳 Carte',
+      international:'🌍 International',
+    }
+
+    const statusStyle = {
+      pending:    { label:'⏳ En attente', color:'var(--gold)' },
+      processing: { label:'⚙️ En cours',  color:'var(--accent)' },
+      completed:  { label:'✓ Effectué',   color:'var(--success)' },
+      failed:     { label:'✗ Échoué',     color:'var(--error)' },
+    }
+
+    el.innerHTML = list.map(r => {
+      const ss = statusStyle[r.status] || statusStyle.pending
+      const fraisMarketou = Math.round(r.amount * 0.05)
+      const netRecu       = r.amount - fraisMarketou
+
+      return `
+      <div class="admin-card" id="retr-${r.id}">
+        <div class="admin-card-header">
+          <div>
+            <div class="admin-card-title">
+              💸 ${r.amount.toLocaleString('fr-FR')} FCFA
+            </div>
+            <div class="admin-card-meta">
+              @${r.entities?.username || '—'} · ${methodLabel[r.method] || r.method}
+            </div>
+            <div class="admin-card-meta" style="margin-top:4px">
+              <strong>Envoyer sur :</strong>
+              ${r.reseau ? `<span class="reseau-badge">${r.reseau.toUpperCase()}</span>` : ''}
+              <code style="background:var(--bg);padding:2px 10px;border-radius:6px;font-size:13px;font-weight:700;letter-spacing:0.5px">
+                ${r.numero}
+              </code>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">
+              Maketou prendra 5% = ${fraisMarketou.toLocaleString('fr-FR')} FCFA
+              · Utilisateur reçoit <strong>${netRecu.toLocaleString('fr-FR')} FCFA</strong>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;font-weight:600;color:${ss.color}">${ss.label}</div>
+            <div class="admin-card-date">${new Date(r.created_at).toLocaleString('fr-FR')}</div>
+          </div>
+        </div>
+
+        ${r.status === 'pending' ? `
+        <div class="admin-card-actions">
+          <button class="btn-process" onclick="marquerEnCours('${r.id}', this)">
+            ⚙️ EN COURS D'ENVOI
+          </button>
+          <button class="btn-confirm" onclick="askConfirm('retr_confirm','${r.id}',
+            'Confirmer l\\'envoi de ${r.amount.toLocaleString('fr-FR')} FCFA vers ${r.numero} ?<br><br>L\\'utilisateur a reçu ${netRecu.toLocaleString('fr-FR')} FCFA.')">
+            ✓ ENVOI EFFECTUÉ
+          </button>
+          <button class="btn-reject" onclick="askConfirm('retr_reject','${r.id}',
+            'Rejeter ce retrait ? Le solde wallet sera remboursé.')">
+            ✗ REJETER
+          </button>
+        </div>` : ''}
+
+        ${r.status === 'processing' ? `
+        <div class="admin-card-actions">
+          <button class="btn-confirm" onclick="askConfirm('retr_confirm','${r.id}',
+            'Confirmer l\\'envoi effectué ?')">
+            ✓ CONFIRMER ENVOI
+          </button>
+        </div>` : ''}
+      </div>`
+    }).join('')
+  }
+
+  window.filterRetr = function(btn) {
+    document.querySelectorAll('#section-retraits .filter-pill')
+      .forEach(p => p.classList.remove('active'))
+    btn.classList.add('active')
+    const status = btn.dataset.status
+    const filtered = status === 'all'
+      ? allRetraits
+      : allRetraits.filter(r => r.status === status)
+    renderRetraits(filtered)
+  }
+
+  window.marquerEnCours = async function(retraitId, btn) {
+    btn.disabled = true
+    await supabase.from('retraits')
+      .update({ status: 'processing' })
+      .eq('id', retraitId)
+    await loadRetraits()
+  }
+
+  // ── STATS ──
+  async function loadStats() {
+    const el = document.getElementById('statsGrid')
+    el.innerHTML = '<div class="feed-loading">Chargement...</div>'
+
+    const [
+      { count: totalUsers },
+      { count: totalSouffles },
+      { data: revenue },
+      { count: offrCompleted },
+      { count: retrCompleted },
+      { data: walletSum },
+    ] = await Promise.all([
+      supabase.from('entities').select('id', { count: 'exact', head: true }),
+      supabase.from('souffles').select('id', { count: 'exact', head: true }),
+      supabase.from('aether_revenue').select('amount'),
+      supabase.from('offrandes').select('id', { count: 'exact', head: true }).eq('status','completed'),
+      supabase.from('retraits').select('id',  { count: 'exact', head: true }).eq('status','completed'),
+      supabase.from('wallets').select('balance'),
+    ])
+
+    const totalRevenue  = revenue?.reduce((s, r) => s + r.amount, 0) || 0
+    const totalWallets  = walletSum?.reduce((s, w) => s + w.balance, 0) || 0
+
+    el.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-card-icon">👥</div>
+        <div class="stat-card-num">${(totalUsers||0).toLocaleString('fr-FR')}</div>
+        <div class="stat-card-label">Âmes inscrites</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">💨</div>
+        <div class="stat-card-num">${(totalSouffles||0).toLocaleString('fr-FR')}</div>
+        <div class="stat-card-label">Souffles publiés</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-card-icon">💰</div>
+        <div class="stat-card-num">${totalRevenue.toLocaleString('fr-FR')}</div>
+        <div class="stat-card-label">Revenus Aether (FCFA)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">💎</div>
+        <div class="stat-card-num">${(offrCompleted||0).toLocaleString('fr-FR')}</div>
+        <div class="stat-card-label">Offrandes confirmées</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">💸</div>
+        <div class="stat-card-num">${(retrCompleted||0).toLocaleString('fr-FR')}</div>
+        <div class="stat-card-label">Retraits effectués</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-icon">🏦</div>
+        <div class="stat-card-num">${totalWallets.toLocaleString('fr-FR')}</div>
+        <div class="stat-card-label">Soldes wallets (FCFA)</div>
+      </div>
+    `
+
+    // Dernières transactions
+    const { data: recent } = await supabase
+      .from('offrandes')
+      .select('*, from_entity:from_entity_id(username), to_entity:to_entity_id(username)')
+      .eq('status', 'completed')
+      .order('confirmed_at', { ascending: false })
+      .limit(10)
+
+    const rtEl = document.getElementById('recentTransactions')
+    if (!recent?.length) {
+      rtEl.innerHTML = '<div class="feed-empty">Aucune transaction.</div>'
+      return
+    }
+
+    rtEl.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        ${recent.map(o => `
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border)">
+          <span style="font-size:18px">💎</span>
+          <div style="flex:1">
+            <span style="font-size:13px;font-weight:600">@${o.from_entity?.username}</span>
+            <span style="font-size:12px;color:var(--text3)"> → @${o.to_entity?.username}</span>
+          </div>
+          <div style="font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--success)">
+            +${o.net_amount.toLocaleString('fr-FR')} F
+          </div>
+          <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold)">
+            +${o.commission.toLocaleString('fr-FR')} F
+          </div>
+          <div style="font-size:11px;color:var(--text3)">
+            ${new Date(o.confirmed_at).toLocaleDateString('fr-FR')}
+          </div>
+        </div>`).join('')}
+      </div>`
+  }
+
+  // ── UTILISATEURS ──
+  async function loadUsers() {
+    const el = document.getElementById('users-list')
+    el.innerHTML = '<div class="feed-loading">Chargement...</div>'
+
+    const { data } = await supabase
+      .from('entities')
+      .select('*, wallets(balance)')
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    allUsers = data || []
+    renderUsers(allUsers)
+  }
+
+  function renderUsers(list) {
+    const el = document.getElementById('users-list')
+    if (!list.length) { el.innerHTML = '<div class="feed-empty">Aucun utilisateur.</div>'; return }
+
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        ${list.map(u => `
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border)">
+          <div style="width:38px;height:38px;border-radius:12px;background:rgba(91,78,203,0.1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--accent);flex-shrink:0">
+            ${(u.display_name||'?')[0].toUpperCase()}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(u.display_name||'—')}</div>
+            <div style="font-size:11px;color:var(--text3)">@${u.username} · Karma ${u.karma_score||0}</div>
+          </div>
+          <div style="font-size:12px;color:var(--success);font-weight:600">
+            ${(u.wallets?.balance||0).toLocaleString('fr-FR')} FCFA
+          </div>
+          <div style="font-size:11px;color:var(--text3)">
+            ${new Date(u.created_at).toLocaleDateString('fr-FR')}
+          </div>
+          ${u.is_admin ? '<span style="font-size:10px;background:rgba(184,134,11,0.1);color:var(--gold);padding:2px 8px;border-radius:6px;font-family:Cinzel,serif">ADMIN</span>' : ''}
+        </div>`).join('')}
+      </div>`
+  }
+
+  window.searchUser = function(query) {
+    const q = query.toLowerCase()
+    const filtered = allUsers.filter(u =>
+      (u.display_name||'').toLowerCase().includes(q) ||
+      (u.username||'').toLowerCase().includes(q)
+    )
+    renderUsers(filtered)
+  }
+
+  // ── MODAL CONFIRMATION ──
+  window.askConfirm = function(action, id, body) {
+    confirmAction = { action, id }
+    document.getElementById('confirmTitle').textContent =
+      action.includes('confirm') ? '✓ Confirmer' : '✗ Rejeter'
+    document.getElementById('confirmBody').innerHTML = body
+    document.getElementById('confirmOk').style.background =
+      action.includes('reject') ? 'linear-gradient(135deg,#c62828,#8b0000)' : ''
+    document.getElementById('confirmModal').classList.remove('hidden')
+  }
+
+  window.closeConfirm = () => {
+    document.getElementById('confirmModal').classList.add('hidden')
+    confirmAction = null
+    document.getElementById('confirmMsg').className = 'hidden'
+  }
+
+  window.executeConfirm = async function() {
+    if (!confirmAction) return
+    const btn = document.getElementById('confirmOk')
+    const msg = document.getElementById('confirmMsg')
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+
+    const { action, id } = confirmAction
+    let error = null
+
+    if (action === 'offr_confirm') {
+      const { error: e } = await supabase.rpc('confirmer_offrande', { offrance_id: id })
+      error = e
+    } else if (action === 'offr_reject') {
+      const { error: e } = await supabase.rpc('rejeter_offrande', { offrance_id: id })
+      error = e
+    } else if (action === 'retr_confirm') {
+      const { error: e } = await supabase.rpc('confirmer_retrait', { retrait_id: id })
+      error = e
+    } else if (action === 'retr_reject') {
+      const { error: e } = await supabase.rpc('rejeter_retrait', { retrait_id: id })
+      error = e
+    }
+
+    btn.disabled = false
+    btn.textContent = 'CONFIRMER'
+
+    if (error) {
+      msg.className = 'msg-error'
+      msg.textContent = error.message
+      return
+    }
+
+    closeConfirm()
+    if (action.startsWith('offr')) await loadOffrandes()
+    if (action.startsWith('retr')) await loadRetraits()
+    await loadBadges()
+  }
+
+  window.handleLogout = logout
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+</script>
+</body>
+</html>

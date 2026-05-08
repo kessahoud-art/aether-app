@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Bienvenue</title>
+  <link rel="stylesheet" href="/css/aether.css">
+</head>
+<body>
+<div class="onboard-wrap">
+  <div class="onboard-box">
+
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot-1"></div>
+      <div class="step-dot"        id="dot-2"></div>
+      <div class="step-dot"        id="dot-3"></div>
+    </div>
+
+    <!-- ÉTAPE 1 : Nom d'âme -->
+    <div class="onboard-step active" id="step-1">
+      <div class="step-title">ÉTAPE 1 · 3</div>
+      <div class="step-heading">Quel est ton nom d'âme ?</div>
+      <div class="step-sub">C'est ainsi que tu seras connu sur Aether. Choisis bien — il ne pourra pas être changé facilement.</div>
+
+      <div class="field">
+        <label>Nom d'âme (visible par tous)</label>
+        <input type="text" id="displayName" placeholder="Ex: Aminata Lumière" maxlength="40" />
+      </div>
+
+      <div class="field">
+        <label>Identifiant unique</label>
+        <input type="text" id="username" placeholder="Ex: aminata_lumiere" maxlength="30" />
+      </div>
+
+      <button class="btn btn-primary" onclick="goStep2()">CONTINUER →</button>
+    </div>
+
+    <!-- ÉTAPE 2 : Intention -->
+    <div class="onboard-step" id="step-2">
+      <div class="step-title">ÉTAPE 2 · 3</div>
+      <div class="step-heading">Quelle est ton intention ?</div>
+      <div class="step-sub">Pourquoi es-tu là ? Cette phrase sera gravée sur ton Temple et visible par tous.</div>
+
+      <div class="field">
+        <label>Mon intention sur Aether</label>
+        <textarea id="intention" placeholder="Je suis ici pour..."></textarea>
+      </div>
+
+      <button class="btn btn-primary" onclick="goStep3()">CONTINUER →</button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="goStep(1)">← Retour</button>
+    </div>
+
+    <!-- ÉTAPE 3 : Aura -->
+    <div class="onboard-step" id="step-3">
+      <div class="step-title">ÉTAPE 3 · 3</div>
+      <div class="step-heading">Quelle est ton aura dominante ?</div>
+      <div class="step-sub">Elle colorera tes Souffles dans le Flux Divin. Tu pourras en changer plus tard.</div>
+
+      <div class="aura-grid">
+        <div class="aura-option" data-aura="feu"    onclick="selectAura(this)">
+          <span class="aura-icon">🔥</span>
+          <span class="aura-label" style="color:#e64a19">FEU</span>
+        </div>
+        <div class="aura-option" data-aura="eau"    onclick="selectAura(this)">
+          <span class="aura-icon">💧</span>
+          <span class="aura-label" style="color:#1565c0">EAU</span>
+        </div>
+        <div class="aura-option selected" data-aura="terre" onclick="selectAura(this)">
+          <span class="aura-icon">🌿</span>
+          <span class="aura-label" style="color:#2e7d32">TERRE</span>
+        </div>
+        <div class="aura-option" data-aura="eclair" onclick="selectAura(this)">
+          <span class="aura-icon">⚡</span>
+          <span class="aura-label" style="color:#f57f17">ÉCLAIR</span>
+        </div>
+        <div class="aura-option" data-aura="brume"  onclick="selectAura(this)">
+          <span class="aura-icon">🌫️</span>
+          <span class="aura-label" style="color:#6a1b9a">BRUME</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="finishBtn" onclick="finishOnboarding()">
+        ✦ ENTRER DANS L'AETHER
+      </button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="goStep(2)">← Retour</button>
+
+      <div id="msgBox" class="hidden"></div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from '/lib/supabase.js'
+  import { requireAuth } from '/lib/auth.js'
+
+  let selectedAura = 'terre'
+
+  // Vérif auth
+  const user = await requireAuth()
+
+  window.goStep2 = function() {
+    const name = document.getElementById('displayName').value.trim()
+    const user = document.getElementById('username').value.trim()
+    if (!name || !user) return alert('Remplis les deux champs.')
+    if (!/^[a-z0-9_]+$/.test(user)) return alert('Identifiant : lettres minuscules, chiffres et _ uniquement.')
+    goStep(2)
+  }
+
+  window.goStep3 = function() {
+    const intention = document.getElementById('intention').value.trim()
+    if (!intention) return alert('Écris ton intention.')
+    goStep(3)
+  }
+
+  window.goStep = function(n) {
+    document.querySelectorAll('.onboard-step').forEach(s => s.classList.remove('active'))
+    document.getElementById(`step-${n}`).classList.add('active')
+    document.querySelectorAll('.step-dot').forEach((d, i) => {
+      d.classList.remove('active', 'done')
+      if (i + 1 < n)  d.classList.add('done')
+      if (i + 1 === n) d.classList.add('active')
+    })
+  }
+
+  window.selectAura = function(el) {
+    document.querySelectorAll('.aura-option').forEach(o => o.classList.remove('selected'))
+    el.classList.add('selected')
+    selectedAura = el.dataset.aura
+  }
+
+  window.finishOnboarding = async function() {
+    const btn         = document.getElementById('finishBtn')
+    const displayName = document.getElementById('displayName').value.trim()
+    const username    = document.getElementById('username').value.trim()
+    const intention   = document.getElementById('intention').value.trim()
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+
+    const { error } = await supabase
+      .from('entities')
+      .update({
+        display_name:           displayName,
+        username:               username,
+        intention:              intention,
+        aura_color:             selectedAura,
+        onboarding_completed:   true
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      btn.disabled = false
+      btn.textContent = '✦ ENTRER DANS L\'AETHER'
+      const box = document.getElementById('msgBox')
+      box.className = 'msg-error'
+      box.textContent = error.message === 'duplicate key value violates unique constraint "entities_username_key"'
+        ? 'Cet identifiant est déjà pris. Choisis-en un autre.'
+        : error.message
+      return
+    }
+
+    window.location.href = '/flux'
+  }
+</script>
+</body>
+</html>
