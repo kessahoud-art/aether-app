@@ -1,0 +1,97 @@
+.notif-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn-notif-action {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-notif-action:hover       { border-color: var(--border2); color: var(--text); }
+.btn-notif-action.danger:hover { border-color: #ffcdd2; color: var(--error); background: #fff5f5; }
+
+/* ── JOUR LABEL ── */
+.notif-day-label {
+  font-size: 11px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 2px;
+  color: var(--text3);
+  padding: 16px 4px 8px;
+  text-transform: capitalize;
+}
+
+/* ── CARD ── */
+.notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.notif-card:hover {
+  box-shadow: var(--shadow);
+  border-color: var(--border2);
+}
+
+.notif-card.unread {
+  background: rgba(91,78,203,0.03);
+  border-color: rgba(91,78,203,0.15);
+}
+
+.notif-card.unread::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent), var(--gold));
+  border-radius: 0 2px 2px 0;
+}
+
+/* ── AVATAR ── */
+.notif-avatar {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* ── BODY ── */
+.notif-body   { flex: 1; min-width: 0; }
+.notif-title  { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.notif-text   { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 4px; }
+.notif-time   { font-size: 11px; color: var(--text3); }
+
+/* ── DOT ── */
+.unread-dot {
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
