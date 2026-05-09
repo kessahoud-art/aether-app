@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Notifications</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"          class="nav-item">🌊 Flux</a>
+    <a href="/conciles"      class="nav-item">🔮 Conciles</a>
+    <a href="/notifications" class="nav-item active">🔔 Notifs</a>
+    <a href="/temple"        class="nav-item">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="notif-wrap">
+
+  <div class="notif-header">
+    <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:var(--gold)">
+      🔔 NOTIFICATIONS
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-notif-action" onclick="toutMarquerLu()">
+        ✓ Tout marquer lu
+      </button>
+      <button class="btn-notif-action danger" onclick="toutSupprimer()">
+        🗑 Tout supprimer
+      </button>
+    </div>
+  </div>
+
+  <!-- FILTRES -->
+  <div class="filter-row" style="margin-bottom:16px">
+    <button class="filter-pill active" data-filter="all"      onclick="filterNotifs(this)">Toutes</button>
+    <button class="filter-pill"        data-filter="unread"   onclick="filterNotifs(this)">Non lues</button>
+    <button class="filter-pill"        data-filter="resonance" onclick="filterNotifs(this)">✨ Résonances</button>
+    <button class="filter-pill"        data-filter="lien"     onclick="filterNotifs(this)">🔗 Liens</button>
+    <button class="filter-pill"        data-filter="offrande" onclick="filterNotifs(this)">💎 Offrandes</button>
+    <button class="filter-pill"        data-filter="concile"  onclick="filterNotifs(this)">🔮 Conciles</button>
+  </div>
+
+  <div id="notifList">
+    <div class="feed-loading">Chargement...</div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { requireAuth, logout }            from '/lib/auth.js'
+  import { getNotifications, markAllRead,
+           markOneRead, deleteAll,
+           NOTIF_ICONS }                    from '/lib/notifications.js'
+  import { EMOTIONS, timeAgo }              from '/lib/utils.js'
+  import { supabase }                       from '/lib/supabase.js'
+
+  let currentUser = null
+  let allNotifs   = []
+
+  currentUser = await requireAuth()
+
+  await load()
+
+  // Realtime : nouvelles notifs en direct
+  supabase
+    .channel('notifs-live')
+    .on('postgres_changes', {
+      event:  'INSERT',
+      schema: 'public',
+      table:  'notifications',
+      filter: `to_entity_id=eq.${currentUser.id}`
+    }, async () => await load())
+    .subscribe()
+
+  async function load() {
+    allNotifs = await getNotifications(currentUser.id)
+    render(allNotifs)
+  }
+
+  function render(list) {
+    const el = document.getElementById('notifList')
+
+    if (!list.length) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔔</div>
+          Aucune notification pour l'instant.<br>
+          Publie un Souffle pour commencer.
+        </div>`
+      return
+    }
+
+    // Grouper par jour
+    const groups = {}
+    list.forEach(n => {
+      const day = new Date(n.created_at).toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long'
+      })
+      if (!groups[day]) groups[day] = []
+      groups[day].push(n)
+    })
+
+    el.innerHTML = Object.entries(groups).map(([day, notifs]) => `
+      <div class="notif-day-label">${day}</div>
+      ${notifs.map(n => buildCard(n)).join('')}
+    `).join('')
+  }
+
+  function buildCard(n) {
+    const icon   = NOTIF_ICONS[n.type] || '🔔'
+    const from   = n.from_entity
+    const e      = EMOTIONS[from?.aura_color] || EMOTIONS.terre
+    const unread = !n.is_read
+
+    return `
+    <div
+      class="notif-card ${unread ? 'unread' : ''}"
+      id="notif-${n.id}"
+      onclick="handleClick('${n.id}', '${n.link || '/flux'}')"
+    >
+      <div class="notif-avatar"
+        style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+        ${icon}
+      </div>
+
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        ${n.body ? `<div class="notif-text">${n.body}</div>` : ''}
+        <div class="notif-time">${timeAgo(n.created_at)}</div>
+      </div>
+
+      ${unread ? '<div class="unread-dot"></div>' : ''}
+    </div>`
+  }
+
+  window.handleClick = async function(notifId, link) {
+    await markOneRead(notifId)
+    document.getElementById(`notif-${notifId}`)?.classList.remove('unread')
+    const dot = document.querySelector(`#notif-${notifId} .unread-dot`)
+    if (dot) dot.remove()
+    if (link && link !== '#') window.location.href = link
+  }
+
+  window.toutMarquerLu = async function() {
+    await markAllRead(currentUser.id)
+    document.querySelectorAll('.notif-card').forEach(c => c.classList.remove('unread'))
+    document.querySelectorAll('.unread-dot').forEach(d => d.remove())
+  }
+
+  window.toutSupprimer = async function() {
+    if (!confirm('Supprimer toutes les notifications ?')) return
+    await deleteAll(currentUser.id)
+    allNotifs = []
+    render([])
+  }
+
+  window.filterNotifs = function(btn) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'))
+    btn.classList.add('active')
+    const f = btn.dataset.filter
+
+    let filtered = allNotifs
+    if (f === 'unread')   filtered = allNotifs.filter(n => !n.is_read)
+    else if (f === 'resonance') filtered = allNotifs.filter(n => n.type === 'resonance')
+    else if (f === 'lien')      filtered = allNotifs.filter(n => n.type === 'lien')
+    else if (f === 'offrande')  filtered = allNotifs.filter(n => n.type.startsWith('offrande') || n.type.startsWith('retrait'))
+    else if (f === 'concile')   filtered = allNotifs.filter(n => n.type.startsWith('concile'))
+
+    render(filtered)
+  }
+
+  window.handleLogout = logout
+</script>
+</body>
+</html>

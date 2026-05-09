@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Recherche</title>
+  <link rel="stylesheet" href="/css/aether.css">
+  <link rel="stylesheet" href="/css/flux.css">
+  <link rel="stylesheet" href="/css/recherche.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/flux" class="nav-logo">✦ AETHER</a>
+  <div class="nav-links">
+    <a href="/flux"          class="nav-item">🌊 Flux</a>
+    <a href="/conciles"      class="nav-item">🔮 Conciles</a>
+    <a href="/notifications" class="nav-item" id="navNotifs">🔔 <span class="nav-badge hidden" id="navBadge">0</span></a>
+    <a href="/temple"        class="nav-item" id="navTemple">🏛️ Temple</a>
+  </div>
+  <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
+</nav>
+
+<div class="search-wrap">
+
+  <!-- BARRE DE RECHERCHE -->
+  <div class="search-bar-wrap">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input-main"
+        placeholder="Recherche une âme, un Souffle, un Concile..."
+        oninput="handleSearch()"
+        autofocus
+      />
+      <button class="search-clear hidden" id="clearBtn" onclick="clearSearch()">×</button>
+    </div>
+  </div>
+
+  <!-- ÉTAT VIDE -->
+  <div id="searchEmpty" class="search-state">
+    <div style="font-size:40px;margin-bottom:16px">🔍</div>
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);margin-bottom:8px">
+      EXPLORER L'AETHER
+    </div>
+    <div style="font-size:13px;color:var(--text3);line-height:1.7">
+      Recherche par nom, @identifiant,<br>
+      contenu de Souffle ou nom de Concile.
+    </div>
+  </div>
+
+  <!-- LOADER -->
+  <div id="searchLoader" class="search-state hidden">
+    <div class="loader" style="border-color:rgba(184,134,11,0.3);border-top-color:var(--gold);width:32px;height:32px"></div>
+  </div>
+
+  <!-- RÉSULTATS -->
+  <div id="searchResults" class="hidden">
+
+    <!-- ÂMES -->
+    <div id="blockEntities" class="hidden">
+      <div class="result-section-title">👤 ÂMES</div>
+      <div id="listEntities"></div>
+    </div>
+
+    <!-- CONCILES -->
+    <div id="blockConciles" class="hidden">
+      <div class="result-section-title">🔮 CONCILES</div>
+      <div id="listConciles"></div>
+    </div>
+
+    <!-- SOUFFLES -->
+    <div id="blockSouffles" class="hidden">
+      <div class="result-section-title">💨 SOUFFLES</div>
+      <div id="listSouffles"></div>
+    </div>
+
+    <!-- AUCUN RÉSULTAT -->
+    <div id="noResults" class="search-state hidden">
+      <div style="font-size:36px;margin-bottom:12px">🌫️</div>
+      <div style="font-size:14px;color:var(--text3)">Aucun résultat trouvé.</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script type="module">
+  import { requireAuth, logout, getEntity } from '/lib/auth.js'
+  import { searchAll }      from '/lib/search.js'
+  import { EMOTIONS, timeAgo, avatarInitials } from '/lib/utils.js'
+  import { countUnread }    from '/lib/notifications.js'
+  import { supabase }       from '/lib/supabase.js'
+
+  let currentUser = null
+  let timer       = null
+
+  currentUser = await requireAuth()
+
+  // Badge + Temple
+  const entity = await getEntity(currentUser.id)
+  const unread = await countUnread(currentUser.id)
+  const badge  = document.getElementById('navBadge')
+  if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden') }
+  const navTemple = document.getElementById('navTemple')
+  if (navTemple && entity?.username) navTemple.href = `/temple?u=${entity.username}`
+
+  window.handleSearch = function() {
+    const q = document.getElementById('searchInput').value.trim()
+    document.getElementById('clearBtn').classList.toggle('hidden', !q)
+    clearTimeout(timer)
+
+    if (!q) {
+      showState('empty')
+      return
+    }
+
+    showState('loading')
+    timer = setTimeout(() => runSearch(q), 350)
+  }
+
+  async function runSearch(q) {
+    const { entities, souffles, conciles } = await searchAll(q)
+    const total = entities.length + souffles.length + conciles.length
+
+    showState('results')
+
+    if (!total) {
+      document.getElementById('noResults').classList.remove('hidden')
+      document.getElementById('blockEntities').classList.add('hidden')
+      document.getElementById('blockSouffles').classList.add('hidden')
+      document.getElementById('blockConciles').classList.add('hidden')
+      return
+    }
+
+    document.getElementById('noResults').classList.add('hidden')
+
+    // Entités
+    if (entities.length) {
+      document.getElementById('blockEntities').classList.remove('hidden')
+      document.getElementById('listEntities').innerHTML = entities.map(u => {
+        const e = EMOTIONS[u.aura_color] || EMOTIONS.terre
+        return `
+        <div class="result-card" onclick="window.location.href='/temple?u=${u.username}'">
+          <div class="result-avatar"
+            style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+            ${avatarInitials(u.display_name || '?')}
+          </div>
+          <div class="result-body">
+            <div class="result-title">${escHtml(u.display_name || '—')}</div>
+            <div class="result-meta">@${u.username} · Sagesse ${u.wisdom_level} · Karma ${u.karma_score}</div>
+          </div>
+          <div class="result-arrow">→</div>
+        </div>`
+      }).join('')
+    } else {
+      document.getElementById('blockEntities').classList.add('hidden')
+    }
+
+    // Conciles
+    if (conciles.length) {
+      document.getElementById('blockConciles').classList.remove('hidden')
+      document.getElementById('listConciles').innerHTML = conciles.map(c => {
+        const e = EMOTIONS[c.emotion] || EMOTIONS.terre
+        return `
+        <div class="result-card" onclick="window.location.href='/concile?id=${c.id}'">
+          <div class="result-avatar"
+            style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border};font-size:20px">
+            ${e.icon}
+          </div>
+          <div class="result-body">
+            <div class="result-title">${escHtml(c.name)}</div>
+            <div class="result-meta">${c.member_count || 1} âmes · ${c.type}</div>
+          </div>
+          <div class="result-arrow">→</div>
+        </div>`
+      }).join('')
+    } else {
+      document.getElementById('blockConciles').classList.add('hidden')
+    }
+
+    // Souffles
+    if (souffles.length) {
+      document.getElementById('blockSouffles').classList.remove('hidden')
+      document.getElementById('listSouffles').innerHTML = souffles.map(s => {
+        const e = EMOTIONS[s.emotion] || EMOTIONS.terre
+        return `
+        <div class="result-card souffle-result">
+          <div class="result-avatar"
+            style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+            ${e.icon}
+          </div>
+          <div class="result-body">
+            <div class="result-meta" style="margin-bottom:4px">
+              @${s.entities?.username || '—'} · ${timeAgo(s.created_at)}
+            </div>
+            <div class="result-title" style="font-family:'Sora',sans-serif;font-weight:400;font-size:14px">
+              ${highlight(escHtml(s.content), document.getElementById('searchInput').value)}
+            </div>
+          </div>
+        </div>`
+      }).join('')
+    } else {
+      document.getElementById('blockSouffles').classList.add('hidden')
+    }
+  }
+
+  function showState(state) {
+    document.getElementById('searchEmpty').classList.add('hidden')
+    document.getElementById('searchLoader').classList.add('hidden')
+    document.getElementById('searchResults').classList.add('hidden')
+
+    if (state === 'empty')   document.getElementById('searchEmpty').classList.remove('hidden')
+    if (state === 'loading') document.getElementById('searchLoader').classList.remove('hidden')
+    if (state === 'results') document.getElementById('searchResults').classList.remove('hidden')
+  }
+
+  function highlight(text, query) {
+    if (!query) return text
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi')
+    return text.replace(re, '<mark>$1</mark>')
+  }
+
+  window.clearSearch = function() {
+    document.getElementById('searchInput').value = ''
+    document.getElementById('clearBtn').classList.add('hidden')
+    showState('empty')
+  }
+
+  window.handleLogout = logout
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+</script>
+</body>
+</html>
