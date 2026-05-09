@@ -1,14 +1,16 @@
 {
   "rewrites": [
-    { "source": "/flux",       "destination": "/flux.html" },
-    { "source": "/temple",     "destination": "/temple.html" },
-    { "source": "/login",      "destination": "/login.html" },
-    { "source": "/signup",     "destination": "/signup.html" },
-    { "source": "/onboarding", "destination": "/onboarding.html" },
-    { "source": "/conciles",   "destination": "/conciles.html" },
-    { "source": "/concile",    "destination": "/concile.html" },
-    { "source": "/offrande",   "destination": "/offrande.html" },
-    { "source": "/wallet",     "destination": "/wallet.html" },
-    { "source": "/admin",      "destination": "/admin.html" }
+    { "source": "/flux",          "destination": "/flux.html" },
+    { "source": "/temple",        "destination": "/temple.html" },
+    { "source": "/login",         "destination": "/login.html" },
+    { "source": "/signup",        "destination": "/signup.html" },
+    { "source": "/onboarding",    "destination": "/onboarding.html" },
+    { "source": "/conciles",      "destination": "/conciles.html" },
+    { "source": "/concile",       "destination": "/concile.html" },
+    { "source": "/offrande",      "destination": "/offrande.html" },
+    { "source": "/wallet",        "destination": "/wallet.html" },
+    { "source": "/admin",         "destination": "/admin.html" },
+    { "source": "/notifications", "destination": "/notifications.html" },
+    { "source": "/recherche",     "destination": "/recherche.html" }
   ]
 }
