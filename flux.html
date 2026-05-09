@@ -7,28 +7,24 @@
   <link rel="stylesheet" href="/css/aether.css">
   <link rel="stylesheet" href="/css/flux.css">
 </head>
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-  }
-</script>
 <body>
 
-<!-- NAVBAR -->
 <nav class="navbar">
   <a href="/flux" class="nav-logo">✦ AETHER</a>
   <div class="nav-links">
-    <a href="/flux"      class="nav-item active">🌊 Flux</a>
-    <a href="/conciles"  class="nav-item">🔮 Conciles</a>
-    <a href="/temple"    class="nav-item" id="navTemple">🏛️ Temple</a>
+    <a href="/flux"          class="nav-item active">🌊 Flux</a>
+    <a href="/conciles"      class="nav-item">🔮 Conciles</a>
+    <a href="/recherche"     class="nav-item">🔍</a>
+    <a href="/notifications" class="nav-item" id="navNotifs">
+      🔔 <span class="nav-badge hidden" id="navBadge">0</span>
+    </a>
+    <a href="/temple" class="nav-item" id="navTemple">🏛️ Temple</a>
   </div>
   <button class="nav-btn-logout" onclick="handleLogout()">Quitter</button>
 </nav>
 
-<!-- LAYOUT -->
 <div class="page-layout">
 
-  <!-- FEED -->
   <main class="feed-col">
 
     <!-- COMPOSER -->
@@ -44,20 +40,18 @@
           oninput="updateCounter()"
         ></textarea>
 
-        <!-- Type selector -->
         <div class="type-row">
           <button class="type-pill active" data-type="simple"     onclick="selectType(this)">💬 Simple</button>
           <button class="type-pill"        data-type="oracle"     onclick="selectType(this)">🔮 Oracle</button>
           <button class="type-pill"        data-type="revelation" onclick="selectType(this)">📜 Révélation</button>
         </div>
 
-        <!-- Emotion selector -->
         <div class="emotion-row" id="emotionRow">
-          <button class="emo-pill" data-emo="feu"    onclick="selectEmo(this)">🔥 Feu</button>
-          <button class="emo-pill" data-emo="eau"    onclick="selectEmo(this)">💧 Eau</button>
+          <button class="emo-pill"        data-emo="feu"    onclick="selectEmo(this)">🔥 Feu</button>
+          <button class="emo-pill"        data-emo="eau"    onclick="selectEmo(this)">💧 Eau</button>
           <button class="emo-pill active" data-emo="terre"  onclick="selectEmo(this)">🌿 Terre</button>
-          <button class="emo-pill" data-emo="eclair" onclick="selectEmo(this)">⚡ Éclair</button>
-          <button class="emo-pill" data-emo="brume"  onclick="selectEmo(this)">🌫️ Brume</button>
+          <button class="emo-pill"        data-emo="eclair" onclick="selectEmo(this)">⚡ Éclair</button>
+          <button class="emo-pill"        data-emo="brume"  onclick="selectEmo(this)">🌫️ Brume</button>
         </div>
 
         <div class="composer-footer">
@@ -69,7 +63,6 @@
       </div>
     </div>
 
-    <!-- FEED LIST -->
     <div id="feedList">
       <div class="feed-loading">Chargement du Flux Divin...</div>
     </div>
@@ -80,8 +73,8 @@
 
   </main>
 
-  <!-- SIDEBAR -->
   <aside class="sidebar-col">
+
     <div class="sidebar-card" id="myKarma">
       <div class="sc-title">✦ MON KARMA</div>
       <div class="karma-num" id="karmaNum">—</div>
@@ -98,14 +91,47 @@
         <div class="emo-leg-item"><span>🌫️</span> Mystère · Doute</div>
       </div>
     </div>
+
   </aside>
 
 </div>
 
+<!-- MODAL SIGNALEMENT -->
+<div class="modal-overlay hidden" id="reportModal">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-title">
+      <span>🚩 SIGNALER</span>
+      <button class="modal-close" onclick="closeReport()">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+      Pourquoi signales-tu ce contenu ?
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <label class="report-option"><input type="radio" name="reason" value="spam"> Spam</label>
+      <label class="report-option"><input type="radio" name="reason" value="haine"> Discours haineux</label>
+      <label class="report-option"><input type="radio" name="reason" value="harassment"> Harcèlement</label>
+      <label class="report-option"><input type="radio" name="reason" value="fake"> Fausse information</label>
+      <label class="report-option"><input type="radio" name="reason" value="autre"> Autre</label>
+    </div>
+    <div class="field">
+      <label>Détail (optionnel)</label>
+      <textarea id="reportDetail" placeholder="Explique brièvement..." maxlength="300"></textarea>
+    </div>
+    <button class="btn btn-primary" id="reportBtn" onclick="submitReport()">
+      ENVOYER LE SIGNALEMENT
+    </button>
+    <div id="reportMsg" class="hidden" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <script type="module">
   import { requireAuth, logout, getEntity } from '/lib/auth.js'
-  import { getFeed, publierSouffle, resonner } from '/lib/souffles.js'
-  import { EMOTIONS, TYPES, timeAgo, avatarInitials } from '/lib/utils.js'
+  import { getFeed, publierSouffle,
+           resonner, echoSouffle }          from '/lib/souffles.js'
+  import { EMOTIONS, TYPES,
+           timeAgo, avatarInitials }        from '/lib/utils.js'
+  import { countUnread }                    from '/lib/notifications.js'
+  import { supabase }                       from '/lib/supabase.js'
 
   let currentUser   = null
   let currentEntity = null
@@ -113,26 +139,44 @@
   let selectedType  = 'simple'
   let page          = 0
   let loading       = false
+  let reportTarget  = null
 
   // ── INIT ──
   currentUser   = await requireAuth()
   currentEntity = await getEntity(currentUser.id)
 
-  // Avatar composer
   document.getElementById('composerAvatar').textContent =
     avatarInitials(currentEntity?.display_name || '')
 
-  // Karma sidebar
   document.getElementById('karmaNum').textContent =
     (currentEntity?.karma_score || 0).toLocaleString('fr-FR')
   document.getElementById('karmaLabel').textContent =
     niveauLabel(currentEntity?.karma_score || 0)
 
-  // Lien Temple
-  document.getElementById('navTemple').href =
-    `/temple?u=${currentEntity?.username}`
+  const navTemple = document.getElementById('navTemple')
+  if (navTemple && currentEntity?.username) {
+    navTemple.href = `/temple?u=${currentEntity.username}`
+  }
 
-  // Charger feed
+  // Badge notifications
+  const unread = await countUnread(currentUser.id)
+  const badge  = document.getElementById('navBadge')
+  if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden') }
+
+  // Realtime badge
+  supabase
+    .channel('badge-live')
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public',
+      table: 'notifications',
+      filter: `to_entity_id=eq.${currentUser.id}`
+    }, async () => {
+      const c = await countUnread(currentUser.id)
+      badge.textContent = c
+      badge.classList.toggle('hidden', c === 0)
+    })
+    .subscribe()
+
   await chargerFeed()
 
   // ── COMPOSER ──
@@ -146,22 +190,21 @@
     document.querySelectorAll('.emo-pill').forEach(p => p.classList.remove('active'))
     el.classList.add('active')
     selectedEmo = el.dataset.emo
-    // Coloriser la ligne émotion
     const e = EMOTIONS[selectedEmo]
     document.getElementById('emotionRow').style.borderColor = e.border
   }
 
   window.updateCounter = function() {
     const len = document.getElementById('souffleText').value.length
-    document.getElementById('charCount').textContent = `${len} / 280`
-    document.getElementById('charCount').style.color = len > 250 ? '#c62828' : ''
+    const el  = document.getElementById('charCount')
+    el.textContent = `${len} / 280`
+    el.style.color = len > 250 ? '#c62828' : ''
   }
 
   window.publier = async function() {
     const content = document.getElementById('souffleText').value.trim()
     const btn     = document.getElementById('btnSouffle')
     const msgBox  = document.getElementById('composeMsg')
-
     if (!content) return
 
     btn.disabled = true
@@ -187,12 +230,10 @@
     document.getElementById('souffleText').value = ''
     document.getElementById('charCount').textContent = '0 / 280'
 
-    // Ajouter en tête de feed
     const feedList = document.getElementById('feedList')
-    const card = buildCard({ ...data, entities: currentEntity, resonances: [] })
+    const card = buildCard({ ...data, entities: currentEntity, resonances: [], echos: [] })
     feedList.insertAdjacentHTML('afterbegin', card)
 
-    // Update karma
     currentEntity.karma_score += 10
     document.getElementById('karmaNum').textContent =
       currentEntity.karma_score.toLocaleString('fr-FR')
@@ -208,7 +249,9 @@
     const { data, error } = await getFeed(page)
 
     if (error || !data?.length) {
-      if (page === 0) feedList.innerHTML = '<div class="feed-empty">Le Flux est silencieux pour l\'instant.<br>Sois le premier à Souffler.</div>'
+      if (page === 0) {
+        feedList.innerHTML = '<div class="feed-empty">Le Flux est silencieux.<br>Sois le premier à Souffler.</div>'
+      }
       document.getElementById('btnMore').classList.add('hidden')
       loading = false
       return
@@ -217,11 +260,7 @@
     if (page === 0) feedList.innerHTML = ''
     data.forEach(s => feedList.insertAdjacentHTML('beforeend', buildCard(s)))
 
-    if (data.length === 15) {
-      document.getElementById('btnMore').classList.remove('hidden')
-    } else {
-      document.getElementById('btnMore').classList.add('hidden')
-    }
+    document.getElementById('btnMore').classList.toggle('hidden', data.length < 15)
     loading = false
   }
 
@@ -231,67 +270,95 @@
   }
 
   function buildCard(s) {
-    const e       = EMOTIONS[s.emotion]
-    const t       = TYPES[s.type]
-    const entity  = s.entities || {}
+    const e        = EMOTIONS[s.emotion] || EMOTIONS.terre
+    const t        = TYPES[s.type]       || TYPES.simple
+    const entity   = s.entities          || {}
     const resCount = s.resonances?.length || 0
-    const isMine  = s.entity_id === currentUser.id
-    const hasRes  = s.resonances?.some(r => r.entity_id === currentUser.id)
+    const echoCount= s.echos?.length     || 0
+    const isMine   = s.entity_id === currentUser.id
+    const hasRes   = s.resonances?.some(r => r.entity_id === currentUser.id)
+    const hasEcho  = s.echos?.some(ec => ec.entity_id === currentUser.id)
 
     return `
     <article class="souffle-card ${s.is_ascending ? 'ascending' : ''}"
-             style="border-left: 3px solid ${e.border}">
+      style="border-left:3px solid ${e.border}">
 
       ${s.is_ascending ? '<div class="ascending-banner">✦ Souffle Ascendant</div>' : ''}
       ${s.type !== 'simple' ? `<div class="type-label">${t.icon} ${t.label}</div>` : ''}
 
       <div class="card-top">
-        <div class="card-avatar" style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
+        <div class="card-avatar"
+          style="background:${e.bg};color:${e.color};border:1.5px solid ${e.border}">
           ${avatarInitials(entity.display_name || '?')}
         </div>
         <div class="card-meta">
-          <span class="card-name">${entity.display_name || 'Anonyme'}</span>
+          <span class="card-name"
+            style="cursor:pointer"
+            onclick="window.location.href='/temple?u=${entity.username}'">
+            ${escHtml(entity.display_name || 'Anonyme')}
+          </span>
           <span class="card-handle">@${entity.username || '—'}</span>
           <span class="wisdom-pill">Sagesse ${entity.wisdom_level || 1}</span>
         </div>
         <div class="card-time">${timeAgo(s.created_at)}</div>
       </div>
 
-      <div class="emotion-tag" style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
+      <div class="emotion-tag"
+        style="background:${e.bg};color:${e.color};border:1px solid ${e.border}">
         ${e.icon} Souffle de ${e.label}
       </div>
 
       <p class="card-content">${escHtml(s.content)}</p>
 
       <div class="card-actions">
-        <button
-          class="action-btn ${hasRes ? 'active' : ''}"
-          onclick="handleResonner('${s.id}', this)"
-          data-souffle="${s.id}"
-        >
+        <button class="action-btn ${hasRes ? 'active' : ''}"
+          onclick="handleResonner('${s.id}', this)">
           ✨ <span class="res-count">${resCount}</span>
         </button>
-        <button class="action-btn">🌊 Écho</button>
-        ${isMine ? `<button class="action-btn danger" onclick="voilerSouffle('${s.id}', this)">👁️ Voiler</button>` : ''}
+        <button class="action-btn ${hasEcho ? 'active' : ''}"
+          onclick="handleEcho('${s.id}', this)">
+          🌊 <span>${echoCount}</span>
+        </button>
+        ${isMine ? `
+          <button class="action-btn danger"
+            onclick="voilerSouffle('${s.id}', this)">
+            👁️ Voiler
+          </button>` : `
+          <button class="action-btn"
+            onclick="openReport('souffle','${s.id}')">
+            🚩
+          </button>`}
       </div>
     </article>`
   }
 
+  // ── RÉSONANCES ──
   window.handleResonner = async function(souffleId, btn) {
     const { action } = await resonner(currentUser.id, souffleId, selectedEmo)
     const countEl = btn.querySelector('.res-count')
     const count   = parseInt(countEl.textContent)
     if (action === 'added') {
-      countEl.textContent = count + 1
-      btn.classList.add('active')
+      countEl.textContent = count + 1; btn.classList.add('active')
     } else {
-      countEl.textContent = Math.max(0, count - 1)
-      btn.classList.remove('active')
+      countEl.textContent = Math.max(0, count - 1); btn.classList.remove('active')
     }
   }
 
+  // ── ÉCHOS ──
+  window.handleEcho = async function(souffleId, btn) {
+    const { action } = await echoSouffle(currentUser.id, souffleId)
+    const countEl = btn.querySelector('span')
+    const count   = parseInt(countEl.textContent)
+    if (action === 'added') {
+      countEl.textContent = count + 1; btn.classList.add('active')
+    } else {
+      countEl.textContent = Math.max(0, count - 1); btn.classList.remove('active')
+    }
+  }
+
+  // ── VOILER ──
   window.voilerSouffle = async function(souffleId, btn) {
-    if (!confirm('Voiler ce Souffle ? Il ne sera plus visible publiquement.')) return
+    if (!confirm('Voiler ce Souffle ?')) return
     const { error } = await supabase
       .from('souffles')
       .update({ is_veiled: true })
@@ -299,11 +366,64 @@
     if (!error) btn.closest('.souffle-card').remove()
   }
 
-  window.handleLogout = logout
-
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  // ── SIGNALEMENT ──
+  window.openReport = function(type, id) {
+    reportTarget = { type, id }
+    document.querySelectorAll('input[name="reason"]').forEach(r => r.checked = false)
+    document.getElementById('reportDetail').value = ''
+    document.getElementById('reportMsg').className = 'hidden'
+    document.getElementById('reportModal').classList.remove('hidden')
   }
+
+  window.closeReport = function() {
+    document.getElementById('reportModal').classList.add('hidden')
+    reportTarget = null
+  }
+
+  window.submitReport = async function() {
+    const reason = document.querySelector('input[name="reason"]:checked')?.value
+    const detail = document.getElementById('reportDetail').value.trim()
+    const btn    = document.getElementById('reportBtn')
+    const msg    = document.getElementById('reportMsg')
+
+    if (!reason) {
+      msg.className = 'msg-error'
+      msg.textContent = 'Choisis une raison.'
+      return
+    }
+
+    btn.disabled = true
+    btn.innerHTML = '<span class="loader"></span>'
+
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: currentUser.id,
+      target_type: reportTarget.type,
+      target_id:   reportTarget.id,
+      reason,
+      detail: detail || null
+    })
+
+    btn.disabled = false
+    btn.textContent = 'ENVOYER LE SIGNALEMENT'
+
+    if (error?.code === '23505') {
+      msg.className = 'msg-error'
+      msg.textContent = 'Tu as déjà signalé ce contenu.'
+      return
+    }
+
+    if (error) {
+      msg.className = 'msg-error'
+      msg.textContent = error.message
+      return
+    }
+
+    msg.className = 'msg-success'
+    msg.textContent = '✓ Signalement envoyé.'
+    setTimeout(closeReport, 1500)
+  }
+
+  window.handleLogout = logout
 
   function niveauLabel(k) {
     if (k >= 10000) return '✦ Divin'
@@ -311,6 +431,13 @@
     if (k >= 2000)  return '🔮 Gardien'
     if (k >= 500)   return '🌿 Initié'
     return '🌫️ Novice'
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
   }
 </script>
 </body>
