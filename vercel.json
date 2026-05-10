@@ -12,5 +12,6 @@
     { "source": "/admin",         "destination": "/admin.html" },
     { "source": "/notifications", "destination": "/notifications.html" },
     { "source": "/recherche",     "destination": "/recherche.html" }
+    { "source": "/debug", "destination": "/debug.html" }
   ]
 }
