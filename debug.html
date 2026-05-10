@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — Debug Console</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #222;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: #c9a84c;
+      letter-spacing: 4px;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid #333;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    .dot.green  { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+    .dot.red    { background: #f44336; box-shadow: 0 0 6px #f44336; }
+    .dot.yellow { background: #ffd600; box-shadow: 0 0 6px #ffd600; }
+    .dot.grey   { background: #555; }
+
+    /* GRID */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: #111118;
+      border: 1px solid #222;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #16161f;
+      border-bottom: 1px solid #222;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: #888;
+    }
+
+    .panel-header .icon { font-size: 14px; margin-right: 6px; }
+
+    .panel-body { padding: 12px; }
+
+    /* BUTTONS */
+    .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-blue   { background: rgba(33,150,243,0.15); color: #64b5f6; border-color: rgba(33,150,243,0.3); }
+    .btn-green  { background: rgba(76,175,80,0.15);  color: #81c784; border-color: rgba(76,175,80,0.3); }
+    .btn-yellow { background: rgba(255,214,0,0.15);  color: #ffd600; border-color: rgba(255,214,0,0.3); }
+    .btn-red    { background: rgba(244,67,54,0.15);  color: #ef9a9a; border-color: rgba(244,67,54,0.3); }
+    .btn-purple { background: rgba(156,39,176,0.15); color: #ce93d8; border-color: rgba(156,39,176,0.3); }
+    .btn-gold   { background: rgba(201,168,76,0.15); color: #c9a84c; border-color: rgba(201,168,76,0.3); }
+
+    /* INPUTS */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .input {
+      flex: 1;
+      min-width: 140px;
+      background: #0a0a0f;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .input:focus { border-color: #c9a84c; }
+
+    /* LOG CONSOLE */
+    .console-panel {
+      background: #111118;
+      border: 1px solid #222;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .console-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #16161f;
+      border-bottom: 1px solid #222;
+    }
+
+    .console-title {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: #888;
+    }
+
+    .console-actions { display: flex; gap: 8px; }
+
+    .console-body {
+      height: 320px;
+      overflow-y: auto;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 10px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .log-line:hover { background: rgba(255,255,255,0.03); }
+
+    .log-time  { color: #444; flex-shrink: 0; font-size: 10px; padding-top: 2px; }
+    .log-tag   { flex-shrink: 0; font-weight: 700; font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+    .log-msg   { flex: 1; }
+
+    .log-info    .log-tag { background: rgba(33,150,243,0.2);  color: #64b5f6; }
+    .log-success .log-tag { background: rgba(76,175,80,0.2);   color: #81c784; }
+    .log-error   .log-tag { background: rgba(244,67,54,0.2);   color: #ef9a9a; }
+    .log-warn    .log-tag { background: rgba(255,214,0,0.2);   color: #ffd600; }
+    .log-data    .log-tag { background: rgba(156,39,176,0.2);  color: #ce93d8; }
+    .log-test    .log-tag { background: rgba(201,168,76,0.2);  color: #c9a84c; }
+
+    .log-error { background: rgba(244,67,54,0.05); }
+    .log-success { background: rgba(76,175,80,0.05); }
+
+    /* JSON viewer */
+    .json-block {
+      background: #0a0a0f;
+      border: 1px solid #222;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #81c784;
+      max-height: 120px;
+      overflow-y: auto;
+      margin-top: 6px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* INFO CARDS */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 400px) { .info-grid { grid-template-columns: 1fr 1fr; } }
+
+    .info-card {
+      background: #0a0a0f;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .info-card-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: #c9a84c;
+      margin-bottom: 3px;
+    }
+
+    .info-card-label {
+      font-size: 9px;
+      color: #555;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* SEPARATOR */
+    .sep { height: 1px; background: #1a1a25; margin: 8px 0; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">✦ AETHER DEBUG</div>
+  <div class="status-bar">
+    <div class="status-dot">
+      <div class="dot grey" id="dotSupabase"></div>
+      <span id="labelSupabase">Supabase</span>
+    </div>
+    <div class="status-dot">
+      <div class="dot grey" id="dotAuth"></div>
+      <span id="labelAuth">Auth</span>
+    </div>
+    <div class="status-dot">
+      <div class="dot grey" id="dotEntity"></div>
+      <span id="labelEntity">Entity</span>
+    </div>
+    <div class="status-dot">
+      <div class="dot grey" id="dotSouffle"></div>
+      <span id="labelSouffle">Souffles</span>
+    </div>
+  </div>
+</div>
+
+<!-- INFO CARDS -->
+<div class="info-grid" id="infoGrid">
+  <div class="info-card">
+    <div class="info-card-val" id="infoUserId">—</div>
+    <div class="info-card-label">User ID</div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-val" id="infoEmail">—</div>
+    <div class="info-card-label">Email</div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-val" id="infoUsername">—</div>
+    <div class="info-card-label">Username</div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-val" id="infoKarma">—</div>
+    <div class="info-card-label">Karma</div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-val" id="infoSouffles">—</div>
+    <div class="info-card-label">Souffles</div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-val" id="infoSession">—</div>
+    <div class="info-card-label">Session</div>
+  </div>
+</div>
+
+<!-- GRID PANELS -->
+<div class="grid">
+
+  <!-- AUTH -->
+  <div class="panel">
+    <div class="panel-header">
+      <span><span class="icon">🔐</span>AUTH TESTS</span>
+    </div>
+    <div class="panel-body">
+      <div class="btn-group">
+        <button class="btn btn-blue"   onclick="testGetSession()">getSession()</button>
+        <button class="btn btn-blue"   onclick="testGetUser()">getUser()</button>
+        <button class="btn btn-yellow" onclick="testAuthState()">onAuthStateChange</button>
+        <button class="btn btn-red"    onclick="testSignout()">signOut()</button>
+      </div>
+      <div class="sep"></div>
+      <div class="input-row">
+        <input class="input" id="inEmail"    placeholder="email@test.com" type="email" />
+        <input class="input" id="inPassword" placeholder="password"       type="password" />
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-green"  onclick="testSignup()">signUp()</button>
+        <button class="btn btn-green"  onclick="testSignin()">signIn()</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTITIES -->
+  <div class="panel">
+    <div class="panel-header">
+      <span><span class="icon">🏛️</span>ENTITY TESTS</span>
+    </div>
+    <div class="panel-body">
+      <div class="btn-group">
+        <button class="btn btn-blue"   onclick="testGetEntity()">getEntity(me)</button>
+        <button class="btn btn-green"  onclick="testCreateEntity()">createEntity()</button>
+        <button class="btn btn-yellow" onclick="testCheckRLS()">check RLS</button>
+        <button class="btn btn-purple" onclick="testGetWallet()">getWallet()</button>
+      </div>
+      <div class="sep"></div>
+      <div class="input-row">
+        <input class="input" id="inUsername" placeholder="@username à chercher" />
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-blue" onclick="testGetEntityByUsername()">findByUsername()</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOUFFLES -->
+  <div class="panel">
+    <div class="panel-header">
+      <span><span class="icon">💨</span>SOUFFLES TESTS</span>
+    </div>
+    <div class="panel-body">
+      <div class="btn-group">
+        <button class="btn btn-blue"   onclick="testGetFeed()">getFeed()</button>
+        <button class="btn btn-yellow" onclick="testCountToday()">countToday()</button>
+        <button class="btn btn-purple" onclick="testCheckSouffleRLS()">check RLS</button>
+      </div>
+      <div class="sep"></div>
+      <div class="input-row">
+        <input class="input" id="inSouffleContent" placeholder="Contenu du Souffle test..." />
+        <select class="input" id="inSouffleEmo" style="flex:none;width:90px">
+          <option value="terre">🌿 Terre</option>
+          <option value="feu">🔥 Feu</option>
+          <option value="eau">💧 Eau</option>
+          <option value="eclair">⚡ Éclair</option>
+          <option value="brume">🌫️ Brume</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-green" onclick="testInsertSouffle()">INSERT souffle</button>
+        <button class="btn btn-red"   onclick="testDeleteLastSouffle()">DELETE last</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DB CHECKS -->
+  <div class="panel">
+    <div class="panel-header">
+      <span><span class="icon">🗄️</span>DB CHECKS</span>
+    </div>
+    <div class="panel-body">
+      <div class="btn-group">
+        <button class="btn btn-blue"   onclick="testCheckTables()">check tables</button>
+        <button class="btn btn-yellow" onclick="testCheckPolicies()">check RLS all</button>
+        <button class="btn btn-green"  onclick="testCheckTrigger()">check trigger</button>
+        <button class="btn btn-purple" onclick="testCheckFunctions()">check functions</button>
+      </div>
+      <div class="sep"></div>
+      <div class="btn-group">
+        <button class="btn btn-gold"   onclick="testFullDiagnosis()">🔍 FULL DIAGNOSIS</button>
+        <button class="btn btn-red"    onclick="testCheckErrors()">check errors</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LOG CONSOLE -->
+<div class="console-panel">
+  <div class="console-header">
+    <div class="console-title">📟 CONSOLE</div>
+    <div class="console-actions">
+      <button class="btn btn-yellow" style="font-size:10px;padding:4px 10px" onclick="exportLogs()">Export</button>
+      <button class="btn btn-red"    style="font-size:10px;padding:4px 10px" onclick="clearLogs()">Clear</button>
+    </div>
+  </div>
+  <div class="console-body" id="console">
+    <div class="log-line log-info">
+      <span class="log-time">00:00:00</span>
+      <span class="log-tag">INFO</span>
+      <span class="log-msg">Console Aether Debug initialisée. Configure lib/supabase.js puis clique "FULL DIAGNOSIS".</span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ══════════════════════════════════════════
+  // IMPORT SUPABASE
+  // ══════════════════════════════════════════
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+  // ── Lire les clés depuis lib/supabase.js ou les entrer ici ──
+  let SUPA_URL  = ''
+  let SUPA_ANON = ''
+
+  // Tenter import depuis lib/supabase.js
+  try {
+    const mod = await import('/lib/supabase.js')
+    if (mod.supabase) {
+      window._sb = mod.supabase
+      log('SUCCESS', 'lib/supabase.js importé avec succès', 'success')
+      setDot('dotSupabase', 'green', 'Supabase', 'Connecté')
+    }
+  } catch(e) {
+    log('WARN', 'lib/supabase.js non trouvé — entre les clés manuellement', 'warn')
+    showManualInput()
+    setDot('dotSupabase', 'red', 'Supabase', 'Erreur')
+  }
+
+  function showManualInput() {
+    const grid = document.getElementById('infoGrid')
+    const manual = document.createElement('div')
+    manual.style.cssText = 'grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'
+    manual.innerHTML = `
+      <input id="manualUrl"  class="input" placeholder="https://xxx.supabase.co" style="flex:2;min-width:200px"/>
+      <input id="manualAnon" class="input" placeholder="eyJ... (anon key)" style="flex:3;min-width:200px"/>
+      <button class="btn btn-gold" onclick="connectManual()">Connecter</button>
+    `
+    grid.parentNode.insertBefore(manual, grid)
+  }
+
+  window.connectManual = function() {
+    const url  = document.getElementById('manualUrl')?.value?.trim()
+    const anon = document.getElementById('manualAnon')?.value?.trim()
+    if (!url || !anon) { log('ERROR', 'URL et clé ANON requis', 'error'); return }
+    window._sb = createClient(url, anon, { auth: { persistSession: true, autoRefreshToken: true } })
+    log('SUCCESS', 'Client Supabase créé manuellement', 'success')
+    setDot('dotSupabase', 'green', 'Supabase', 'Manuel')
+  }
+
+  // ══════════════════════════════════════════
+  // LOGGER
+  // ══════════════════════════════════════════
+  const logs = []
+
+  function log(tag, msg, type = 'info', data = null) {
+    const now  = new Date()
+    const time = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => String(n).padStart(2,'0')).join(':')
+
+    const entry = { time, tag, msg, type, data }
+    logs.push(entry)
+
+    const con  = document.getElementById('console')
+    const line = document.createElement('div')
+    line.className = `log-line log-${type}`
+
+    let content = `
+      <span class="log-time">${time}</span>
+      <span class="log-tag">${tag}</span>
+      <span class="log-msg">${msg}</span>`
+
+    if (data !== null) {
+      const json = typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+      content += `<div class="json-block">${escHtml(json)}</div>`
+    }
+
+    line.innerHTML = content
+    con.appendChild(line)
+    con.scrollTop = con.scrollHeight
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  window.clearLogs = function() {
+    document.getElementById('console').innerHTML = ''
+    logs.length = 0
+  }
+
+  window.exportLogs = function() {
+    const txt  = logs.map(l => `[${l.time}] [${l.tag}] ${l.msg}${l.data ? '\n' + JSON.stringify(l.data,null,2) : ''}`).join('\n')
+    const blob = new Blob([txt], { type: 'text/plain' })
+    const a    = document.createElement('a')
+    a.href     = URL.createObjectURL(blob)
+    a.download = `aether-debug-${Date.now()}.txt`
+    a.click()
+  }
+
+  // ══════════════════════════════════════════
+  // STATUS DOTS
+  // ══════════════════════════════════════════
+  function setDot(id, color, label, sublabel) {
+    const dot = document.getElementById(id)
+    const lbl = document.getElementById('label' + id.replace('dot',''))
+    if (dot) { dot.className = `dot ${color}` }
+    if (lbl && sublabel) lbl.textContent = `${label}: ${sublabel}`
+  }
+
+  // ══════════════════════════════════════════
+  // INFO CARDS UPDATE
+  // ══════════════════════════════════════════
+  function setInfo(id, val) {
+    const el = document.getElementById(id)
+    if (el) el.textContent = val
+  }
+
+  // ══════════════════════════════════════════
+  // AUTH TESTS
+  // ══════════════════════════════════════════
+  window.testGetSession = async function() {
+    log('TEST', 'getSession()...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    try {
+      const { data, error } = await window._sb.auth.getSession()
+      if (error)  { log('ERROR', error.message, 'error', error); return }
+      if (!data.session) {
+        log('WARN', 'Aucune session active', 'warn')
+        setDot('dotAuth', 'red', 'Auth', 'Pas de session')
+        setInfo('infoSession', '❌')
+        return
+      }
+
+      const u = data.session.user
+      log('SUCCESS', `Session active — user: ${u.id}`, 'success')
+      log('DATA', 'Session complète', 'data', {
+        user_id:    u.id,
+        email:      u.email,
+        created_at: u.created_at,
+        expires_at: new Date(data.session.expires_at * 1000).toISOString(),
+      })
+
+      setDot('dotAuth', 'green', 'Auth', 'Session OK')
+      setInfo('infoUserId', u.id.slice(0,8) + '...')
+      setInfo('infoEmail',  u.email?.split('@')[0] || '—')
+      setInfo('infoSession', '✅')
+
+    } catch(err) {
+      log('ERROR', err.message, 'error', err)
+    }
+  }
+
+  window.testGetUser = async function() {
+    log('TEST', 'getUser() — appel réseau...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    try {
+      const { data, error } = await window._sb.auth.getUser()
+      if (error) { log('ERROR', error.message, 'error', error); return }
+      if (!data.user) { log('WARN', 'Aucun utilisateur', 'warn'); return }
+
+      log('SUCCESS', `User trouvé: ${data.user.email}`, 'success', {
+        id:         data.user.id,
+        email:      data.user.email,
+        confirmed:  !!data.user.confirmed_at,
+        last_sign:  data.user.last_sign_in_at,
+      })
+    } catch(err) {
+      log('ERROR', err.message, 'error')
+    }
+  }
+
+  window.testAuthState = function() {
+    log('TEST', 'Écoute onAuthStateChange...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data: { subscription } } = window._sb.auth.onAuthStateChange((event, session) => {
+      log('DATA', `Auth event: ${event}`, 'data', {
+        event,
+        user: session?.user?.email || null,
+        expires: session?.expires_at || null,
+      })
+    })
+
+    log('INFO', 'Listener actif — effectue une action auth pour voir les events', 'info')
+    setTimeout(() => { subscription.unsubscribe(); log('INFO', 'Listener arrêté (30s)', 'info') }, 30000)
+  }
+
+  window.testSignout = async function() {
+    log('TEST', 'signOut()...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+    const { error } = await window._sb.auth.signOut()
+    if (error) { log('ERROR', error.message, 'error'); return }
+    log('SUCCESS', 'Déconnecté', 'success')
+    setDot('dotAuth', 'yellow', 'Auth', 'Déconnecté')
+    setInfo('infoSession', '—')
+  }
+
+  window.testSignup = async function() {
+    const email    = document.getElementById('inEmail')?.value?.trim()
+    const password = document.getElementById('inPassword')?.value
+    if (!email || !password) { log('ERROR', 'Email et password requis', 'error'); return }
+
+    log('TEST', `signUp(${email})...`, 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    try {
+      const { data, error } = await window._sb.auth.signUp({ email, password })
+      if (error) {
+        log('ERROR', error.message, 'error', { code: error.status, message: error.message })
+        return
+      }
+      if (data?.user?.identities?.length === 0) {
+        log('WARN', 'Email déjà utilisé', 'warn')
+        return
+      }
+      log('SUCCESS', `Inscription OK — ${data.user?.id}`, 'success', {
+        user_id:  data.user?.id,
+        email:    data.user?.email,
+        confirmed: !!data.user?.confirmed_at,
+      })
+
+      // Vérifier si entity créée
+      setTimeout(async () => {
+        log('INFO', 'Vérification entity après inscription...', 'info')
+        await checkEntityCreated(data.user?.id)
+      }, 1500)
+
+    } catch(err) {
+      log('ERROR', err.message, 'error')
+    }
+  }
+
+  window.testSignin = async function() {
+    const email    = document.getElementById('inEmail')?.value?.trim()
+    const password = document.getElementById('inPassword')?.value
+    if (!email || !password) { log('ERROR', 'Email et password requis', 'error'); return }
+
+    log('TEST', `signIn(${email})...`, 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    try {
+      const { data, error } = await window._sb.auth.signInWithPassword({ email, password })
+      if (error) { log('ERROR', error.message, 'error', error); return }
+
+      log('SUCCESS', `Connecté: ${data.user.email}`, 'success')
+      setDot('dotAuth', 'green', 'Auth', 'Connecté')
+      setInfo('infoUserId',  data.user.id.slice(0,8) + '...')
+      setInfo('infoEmail',   data.user.email?.split('@')[0] || '—')
+      setInfo('infoSession', '✅')
+
+    } catch(err) {
+      log('ERROR', err.message, 'error')
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // ENTITY TESTS
+  // ══════════════════════════════════════════
+  window.testGetEntity = async function() {
+    log('TEST', 'getEntity(currentUser)...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    try {
+      const { data: { session } } = await window._sb.auth.getSession()
+      if (!session) { log('WARN', 'Pas de session — connecte-toi d\'abord', 'warn'); return }
+
+      const userId = session.user.id
+      const { data, error } = await window._sb
+        .from('entities').select('*').eq('id', userId).single()
+
+      if (error) {
+        log('ERROR', `Entity non trouvée: ${error.message}`, 'error', error)
+        setDot('dotEntity', 'red', 'Entity', 'Non trouvée')
+        setInfo('infoUsername', '❌')
+        return
+      }
+
+      log('SUCCESS', `Entity trouvée: @${data.username}`, 'success', data)
+      setDot('dotEntity', 'green', 'Entity', 'OK')
+      setInfo('infoUsername', '@' + data.username)
+      setInfo('infoKarma',    data.karma_score || 0)
+
+    } catch(err) {
+      log('ERROR', err.message, 'error')
+    }
+  }
+
+  window.testGetEntityByUsername = async function() {
+    const username = document.getElementById('inUsername')?.value?.trim().replace('@','')
+    if (!username) { log('ERROR', 'Username requis', 'error'); return }
+
+    log('TEST', `findByUsername(@${username})...`, 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data, error } = await window._sb
+      .from('entities').select('*').eq('username', username).single()
+
+    if (error) { log('ERROR', error.message, 'error', error); return }
+    log('SUCCESS', `Entity trouvée`, 'success', data)
+  }
+
+  window.testCreateEntity = async function() {
+    log('TEST', 'Tentative création entity manuelle...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) { log('WARN', 'Pas de session', 'warn'); return }
+
+    const userId = session.user.id
+    const email  = session.user.email
+    const base   = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g,'_')
+    const username = base + '_' + Math.floor(Math.random() * 9000 + 1000)
+
+    const { data, error } = await window._sb.from('entities').insert({
+      id: userId, username, display_name: base,
+      aura_color: 'terre', wisdom_level: 1, karma_score: 0,
+      onboarding_completed: false,
+    }).select().single()
+
+    if (error) {
+      log('ERROR', `Création échouée: ${error.message}`, 'error', {
+        code: error.code, hint: error.hint, details: error.details
+      })
+      return
+    }
+
+    log('SUCCESS', `Entity créée: @${data.username}`, 'success', data)
+    setDot('dotEntity', 'green', 'Entity', 'Créée')
+  }
+
+  window.testCheckRLS = async function() {
+    log('TEST', 'Vérification RLS entities...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    // Test SELECT
+    const { data: sel, error: selErr } = await window._sb
+      .from('entities').select('id, username').limit(3)
+    if (selErr) log('ERROR', `SELECT bloqué: ${selErr.message}`, 'error', selErr)
+    else log('SUCCESS', `SELECT OK — ${sel.length} ligne(s)`, 'success')
+
+    // Test INSERT (doit échouer si pas connecté)
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) {
+      log('WARN', 'Pas connecté — test INSERT ignoré', 'warn')
+      return
+    }
+
+    log('INFO', `RLS INSERT check — user: ${session.user.id}`, 'info')
+  }
+
+  window.testGetWallet = async function() {
+    log('TEST', 'getWallet()...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) { log('WARN', 'Pas de session', 'warn'); return }
+
+    const { data, error } = await window._sb
+      .from('wallets').select('*').eq('entity_id', session.user.id).single()
+
+    if (error) {
+      log('ERROR', `Wallet non trouvé: ${error.message}`, 'error', error)
+      return
+    }
+    log('SUCCESS', `Wallet: ${data.balance} FCFA`, 'success', data)
+  }
+
+  // ══════════════════════════════════════════
+  // SOUFFLE TESTS
+  // ══════════════════════════════════════════
+  window.testGetFeed = async function() {
+    log('TEST', 'getFeed() page 0...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data, error } = await window._sb
+      .from('souffles')
+      .select('id, content, emotion, entity_id, created_at, entities(username)')
+      .eq('is_veiled', false)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (error) {
+      log('ERROR', `getFeed error: ${error.message}`, 'error', error)
+      setDot('dotSouffle', 'red', 'Souffles', 'Erreur')
+      return
+    }
+
+    log('SUCCESS', `${data.length} souffle(s) dans le feed`, 'success',
+      data.map(s => ({ id: s.id.slice(0,8), content: s.content?.slice(0,40), emotion: s.emotion })))
+    setDot('dotSouffle', 'green', 'Souffles', `${data.length} trouvés`)
+    setInfo('infoSouffles', data.length)
+  }
+
+  window.testCountToday = async function() {
+    log('TEST', 'countSoufflesToday()...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) { log('WARN', 'Pas de session', 'warn'); return }
+
+    const debut = new Date(); debut.setHours(0,0,0,0)
+    const { count, error } = await window._sb
+      .from('souffles')
+      .select('id', { count: 'exact', head: true })
+      .eq('entity_id', session.user.id)
+      .gte('created_at', debut.toISOString())
+
+    if (error) { log('ERROR', error.message, 'error', error); return }
+    log('SUCCESS', `${count || 0} souffles aujourd'hui (limite: 7)`, count >= 7 ? 'warn' : 'success')
+  }
+
+  window.testInsertSouffle = async function() {
+    const content = document.getElementById('inSouffleContent')?.value?.trim()
+    const emotion = document.getElementById('inSouffleEmo')?.value || 'terre'
+
+    if (!content) { log('ERROR', 'Contenu requis', 'error'); return }
+
+    log('TEST', `INSERT souffle "${content.slice(0,30)}..."`, 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) { log('WARN', 'Pas de session — impossible d\'insérer', 'warn'); return }
+
+    log('INFO', `User ID pour insert: ${session.user.id}`, 'info')
+
+    const payload = {
+      entity_id: session.user.id,
+      content:   content,
+      emotion:   emotion,
+      type:      'simple',
+      karma_score: 10,
+      is_veiled:   false,
+      is_ascending: false,
+    }
+    log('DATA', 'Payload envoyé', 'data', payload)
+
+    const { data, error } = await window._sb
+      .from('souffles').insert(payload).select().single()
+
+    if (error) {
+      log('ERROR', `INSERT échoué: ${error.message}`, 'error', {
+        code:    error.code,
+        message: error.message,
+        details: error.details,
+        hint:    error.hint,
+      })
+      setDot('dotSouffle', 'red', 'Souffles', 'INSERT KO')
+      return
+    }
+
+    log('SUCCESS', `Souffle inséré: ${data.id}`, 'success', data)
+    setDot('dotSouffle', 'green', 'Souffles', 'INSERT OK')
+    window._lastSouffleId = data.id
+  }
+
+  window.testDeleteLastSouffle = async function() {
+    if (!window._lastSouffleId) { log('WARN', 'Aucun souffle test à supprimer', 'warn'); return }
+    log('TEST', `DELETE souffle ${window._lastSouffleId}...`, 'test')
+
+    const { error } = await window._sb
+      .from('souffles').delete().eq('id', window._lastSouffleId)
+
+    if (error) { log('ERROR', error.message, 'error'); return }
+    log('SUCCESS', 'Souffle supprimé', 'success')
+    window._lastSouffleId = null
+  }
+
+  window.testCheckSouffleRLS = async function() {
+    log('TEST', 'Vérification RLS souffles...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const { data: { session } } = await window._sb.auth.getSession()
+
+    // SELECT sans auth
+    const { data: pub } = await window._sb
+      .from('souffles').select('id').limit(1)
+    log(pub ? 'SUCCESS' : 'WARN', `SELECT public: ${pub?.length ?? 0} résultat(s)`, pub ? 'success' : 'warn')
+
+    if (session) {
+      log('INFO', `auth.uid() disponible: ${session.user.id}`, 'info')
+    } else {
+      log('WARN', 'auth.uid() = null → INSERT bloqué par RLS', 'warn')
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // DB CHECKS
+  // ══════════════════════════════════════════
+  window.testCheckTables = async function() {
+    log('TEST', 'Vérification tables...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    const tables = ['entities','souffles','resonances','echos','soul_links',
+                    'wallets','offrandes','retraits','notifications',
+                    'reports','conciles','concile_members']
+
+    for (const table of tables) {
+      try {
+        const { count, error } = await window._sb
+          .from(table).select('*', { count: 'exact', head: true })
+        if (error) {
+          log('ERROR', `❌ ${table}: ${error.message}`, 'error')
+        } else {
+          log('SUCCESS', `✅ ${table}: ${count} lignes`, 'success')
+        }
+      } catch(e) {
+        log('ERROR', `❌ ${table}: exception`, 'error')
+      }
+    }
+  }
+
+  window.testCheckPolicies = async function() {
+    log('TEST', 'Vérification policies RLS...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    // Test chaque table critique avec SELECT + INSERT
+    const criticals = [
+      { table: 'entities',  insert: { id: '00000000-0000-0000-0000-000000000000', username: 'test_policy_check' } },
+      { table: 'souffles',  insert: { entity_id: '00000000-0000-0000-0000-000000000000', content: 'test', emotion: 'terre', type: 'simple' } },
+    ]
+
+    for (const { table } of criticals) {
+      const { data, error } = await window._sb.from(table).select('id').limit(1)
+      if (error) log('ERROR', `${table} SELECT: ${error.message}`, 'error')
+      else log('SUCCESS', `${table} SELECT: ✅`, 'success')
+    }
+
+    log('INFO', 'Pour tester INSERT, utilise les boutons de test dans les panels', 'info')
+  }
+
+  window.testCheckTrigger = async function() {
+    log('TEST', 'Vérification trigger handle_new_user...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    // Vérifier via une inscription test puis suppression
+    log('INFO', 'Le trigger est actif si la table entities a des entrées', 'info')
+
+    const { count } = await window._sb
+      .from('entities').select('*', { count: 'exact', head: true })
+    log('DATA', `${count} entities en base`, 'data')
+
+    if (count === 0) {
+      log('WARN', 'Aucune entity → trigger probablement cassé', 'warn')
+    } else {
+      log('SUCCESS', 'Entities présentes → trigger a fonctionné', 'success')
+    }
+  }
+
+  window.testCheckFunctions = async function() {
+    log('TEST', 'Vérification fonctions SQL...', 'test')
+    if (!window._sb) { log('ERROR', 'Supabase non connecté', 'error'); return }
+
+    // Test increment_karma
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) { log('WARN', 'Pas de session — test fonctions ignoré', 'warn'); return }
+
+    const { error: kErr } = await window._sb
+      .rpc('increment_karma', { uid: session.user.id, delta: 0 })
+
+    if (kErr) log('ERROR', `increment_karma: ${kErr.message}`, 'error', kErr)
+    else log('SUCCESS', 'increment_karma: ✅', 'success')
+  }
+
+  window.testCheckErrors = async function() {
+    log('TEST', 'Vérification erreurs courantes...', 'test')
+
+    const checks = [
+      { name: 'URL Supabase définie',     ok: !!(window._sb) },
+    ]
+
+    for (const c of checks) {
+      log(c.ok ? 'SUCCESS' : 'ERROR', `${c.name}: ${c.ok ? '✅' : '❌'}`, c.ok ? 'success' : 'error')
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // FULL DIAGNOSIS
+  // ══════════════════════════════════════════
+  window.testFullDiagnosis = async function() {
+    clearLogs()
+    log('TEST', '══ DIAGNOSTIC COMPLET AETHER ══', 'test')
+
+    if (!window._sb) {
+      log('ERROR', 'Supabase non connecté — configure les clés', 'error')
+      return
+    }
+
+    // 1. Session
+    log('INFO', '1/6 — Vérification session...', 'info')
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (!session) {
+      log('ERROR', '❌ Pas de session — l\'utilisateur n\'est pas connecté', 'error')
+      log('INFO', '→ Utilise le panel AUTH pour te connecter', 'info')
+    } else {
+      log('SUCCESS', `✅ Session active: ${session.user.email}`, 'success')
+      setInfo('infoUserId',  session.user.id.slice(0,8) + '...')
+      setInfo('infoEmail',   session.user.email?.split('@')[0] || '—')
+      setInfo('infoSession', '✅')
+      setDot('dotAuth', 'green', 'Auth', 'OK')
+    }
+
+    // 2. Entity
+    log('INFO', '2/6 — Vérification entity...', 'info')
+    if (session) {
+      const { data: entity, error: eErr } = await window._sb
+        .from('entities').select('*').eq('id', session.user.id).single()
+
+      if (eErr || !entity) {
+        log('ERROR', `❌ Entity introuvable: ${eErr?.message}`, 'error', eErr)
+        log('WARN', '→ Trigger handle_new_user probablement cassé', 'warn')
+        log('WARN', '→ Lance la correction SQL complète', 'warn')
+        setDot('dotEntity', 'red', 'Entity', 'Manquante')
+        setInfo('infoUsername', '❌')
+      } else {
+        log('SUCCESS', `✅ Entity: @${entity.username} | karma: ${entity.karma_score}`, 'success')
+        setDot('dotEntity', 'green', 'Entity', 'OK')
+        setInfo('infoUsername', '@' + entity.username)
+        setInfo('infoKarma',    entity.karma_score || 0)
+      }
+    }
+
+    // 3. Wallet
+    log('INFO', '3/6 — Vérification wallet...', 'info')
+    if (session) {
+      const { data: wallet, error: wErr } = await window._sb
+        .from('wallets').select('*').eq('entity_id', session.user.id).single()
+
+      if (wErr || !wallet) log('WARN', `⚠️ Wallet manquant: ${wErr?.message}`, 'warn')
+      else log('SUCCESS', `✅ Wallet: ${wallet.balance} FCFA`, 'success')
+    }
+
+    // 4. Tables
+    log('INFO', '4/6 — Vérification tables...', 'info')
+    const requiredTables = ['entities','souffles','resonances','echos',
+                             'soul_links','wallets','notifications']
+    let tablesOk = true
+
+    for (const table of requiredTables) {
+      const { count, error } = await window._sb
+        .from(table).select('*', { count: 'exact', head: true })
+      if (error) {
+        log('ERROR', `❌ Table ${table}: ${error.message}`, 'error')
+        tablesOk = false
+      } else {
+        log('SUCCESS', `✅ Table ${table}: ${count} lignes`, 'success')
+      }
+    }
+
+    // 5. Insert test
+    log('INFO', '5/6 — Test INSERT souffle...', 'info')
+    if (session) {
+      const { data: testSouffle, error: tsErr } = await window._sb
+        .from('souffles')
+        .insert({
+          entity_id:    session.user.id,
+          content:      '[TEST DEBUG] Souffle de diagnostic',
+          emotion:      'terre',
+          type:         'simple',
+          karma_score:  0,
+          is_veiled:    true,  // voilé pour ne pas polluer le feed
+          is_ascending: false,
+        })
+        .select().single()
+
+      if (tsErr) {
+        log('ERROR', `❌ INSERT souffle échoué: ${tsErr.message}`, 'error', {
+          code:    tsErr.code,
+          message: tsErr.message,
+          hint:    tsErr.hint,
+        })
+        setDot('dotSouffle', 'red', 'Souffles', 'INSERT KO')
+
+        if (tsErr.code === '42501') log('WARN', '→ Problème RLS: policy INSERT manquante', 'warn')
+        if (tsErr.message?.includes('auth.uid()')) log('WARN', '→ auth.uid() null: session non transmise', 'warn')
+        if (tsErr.code === '23502') log('WARN', '→ Colonne NOT NULL manquante', 'warn')
+        if (tsErr.code === '23503') log('WARN', '→ entity_id n\'existe pas dans entities', 'warn')
+
+      } else {
+        log('SUCCESS', `✅ INSERT souffle OK: ${testSouffle.id}`, 'success')
+        setDot('dotSouffle', 'green', 'Souffles', 'OK')
+
+        // Nettoyer le souffle de test
+        await window._sb.from('souffles').delete().eq('id', testSouffle.id)
+        log('INFO', 'Souffle test supprimé', 'info')
+      }
+    }
+
+    // 6. Fonctions SQL
+    log('INFO', '6/6 — Vérification fonctions SQL...', 'info')
+    if (session) {
+      const { error: kErr } = await window._sb
+        .rpc('increment_karma', { uid: session.user.id, delta: 0 })
+      if (kErr) log('ERROR', `❌ increment_karma: ${kErr.message}`, 'error')
+      else log('SUCCESS', '✅ increment_karma: OK', 'success')
+    }
+
+    // RÉSUMÉ
+    log('TEST', '══ FIN DU DIAGNOSTIC ══', 'test')
+
+    if (!session) {
+      log('ERROR', 'RÉSUMÉ: Non connecté → connecte-toi d\'abord', 'error')
+    } else if (!tablesOk) {
+      log('ERROR', 'RÉSUMÉ: Tables manquantes → exécuter le SQL de correction', 'error')
+    } else {
+      log('SUCCESS', 'RÉSUMÉ: Système opérationnel ✅', 'success')
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // AUTO-INIT
+  // ══════════════════════════════════════════
+  async function checkEntityCreated(userId) {
+    if (!userId || !window._sb) return
+    const { data, error } = await window._sb
+      .from('entities').select('id, username').eq('id', userId).single()
+    if (error) {
+      log('ERROR', `Entity non créée après inscription: ${error.message}`, 'error')
+      log('WARN', '→ Trigger handle_new_user cassé → exécuter SQL de correction', 'warn')
+    } else {
+      log('SUCCESS', `Entity créée par trigger: @${data.username}`, 'success')
+    }
+  }
+
+  // Auto-check session au chargement
+  setTimeout(async () => {
+    if (!window._sb) return
+    const { data: { session } } = await window._sb.auth.getSession()
+    if (session) {
+      log('INFO', `Session restaurée: ${session.user.email}`, 'info')
+      setDot('dotAuth', 'green', 'Auth', 'Session OK')
+      setInfo('infoUserId',  session.user.id.slice(0,8) + '...')
+      setInfo('infoEmail',   session.user.email?.split('@')[0] || '—')
+      setInfo('infoSession', '✅')
+    } else {
+      log('WARN', 'Pas de session au chargement', 'warn')
+    }
+  }, 500)
+
+</script>
+</body>
+</html>
+```
